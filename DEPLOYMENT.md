@@ -9,22 +9,26 @@ git init
 git add .
 git commit -m "LandGroup safe deployment baseline"
 git branch -M main
-git remote add origin YOUR_REMOTE_GIT_URL
+git remote add origin https://github.com/MarcDemo/LandGroup.git
 git push -u origin main
 ```
 
-## First cPanel Git setup
+## One-time setup for the existing cPanel application
 
-From the parent directory of the application (use your actual repository URL/path):
+Back up the production database outside the application, then attach the existing application directory to Git. The checkout replaces source code only; `db.sqlite3`, `.env`, `media/`, generated static files, logs, and Passenger temporary files do not exist in the Git tree and remain in place.
 
 ```bash
-git clone YOUR_REMOTE_GIT_URL landgroupug.org
-cd landgroupug.org
-cp .env.example .env
+cd /home/farmsnva/landgroupug.org
+cp db.sqlite3 "$HOME/landgroup-db-$(date +%Y%m%d-%H%M%S).sqlite3"
+git init
+git remote add origin https://github.com/MarcDemo/LandGroup.git
+git fetch origin
+git checkout -f -B main origin/main
+test -f .env || cp .env.example .env
 chmod 600 .env
 ```
 
-Fill `.env` with production values. If cPanel does not automatically load `.env`, export the variables in the cPanel Application Environment Variables screen or in the activation script before Passenger starts.
+Use the absolute application path, normally `/home/farmsnva/landgroupug.org`. Fill `.env` with production values; this project loads that file directly at startup.
 
 ## Every future deployment
 
@@ -45,7 +49,7 @@ touch tmp/restart.txt
 
 Replace the virtual-environment path/version with the exact value shown by cPanel’s **Setup Python App** page. If cPanel provides a **Restart** button, it can be used instead of `touch tmp/restart.txt`.
 
-Before the first migration, make an out-of-tree server backup without adding it to Git:
+Before every important migration, an optional timestamped out-of-tree backup can be made without adding it to Git:
 
 ```bash
 cp db.sqlite3 "$HOME/landgroup-db-$(date +%Y%m%d-%H%M%S).sqlite3"
