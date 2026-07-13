@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="text-primary mb-0"><i class="bi bi-speedometer2 me-1"></i> Mobilizer Dashboard</h4>
+    <button id="toggleChartBtn" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-graph-up-arrow me-1"></i> Show Chart
+    </button>
+  </div>
+
+  <div class="row g-4 mb-4">
+
+    <!-- Total Members -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-start border-primary border-4">
+        <div class="card-body d-flex align-items-center">
+          <i class="bi bi-people fs-2 text-primary me-3"></i>
+          <div>
+            <h5 class="mb-0">{{ total_members }}</h5>
+            <small class="text-muted">Total Members</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paid This Week -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-start border-success border-4">
+        <div class="card-body d-flex align-items-center">
+          <i class="bi bi-check-circle-fill fs-2 text-success me-3"></i>
+          <div>
+            <h5 class="mb-0">{{ paid_this_week }}</h5>
+            <small class="text-muted">Paid This Week</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unpaid This Week -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-start border-danger border-4">
+        <div class="card-body d-flex align-items-center">
+          <i class="bi bi-x-circle-fill fs-2 text-danger me-3"></i>
+          <div>
+            <h5 class="mb-0">{{ unpaid_this_week }}</h5>
+            <small class="text-muted">Unpaid This Week</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Personal Deposits -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-start border-info border-4">
+        <div class="card-body d-flex align-items-center">
+          <i class="bi bi-wallet2 fs-2 text-info me-3"></i>
+          <div>
+            <h5 class="mb-0">{{ personal_deposits }}</h5>
+            <small class="text-muted">My Approved Deposits</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="chartContainer" class="card shadow-sm p-4 mb-4 d-none">
+    <h6 class="mb-3 text-secondary">Weekly Payment Status Overview</h6>
+    <div class="col-md-6">
+      <canvas id="weeklyChart" style="height: 200px; max-width: 100%;"></canvas>
+    </div>
+  </div>
+
+  <div class="text-muted small">
+    <i class="bi bi-calendar3 me-1"></i> Current Week Starts: <strong>{{ current_week|date:"F j, Y" }}</strong>
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  document.getElementById('toggleChartBtn').addEventListener('click', function () {
+    const chartContainer = document.getElementById('chartContainer');
+    chartContainer.classList.toggle('d-none');
+    this.innerHTML = chartContainer.classList.contains('d-none')
+      ? '<i class="bi bi-graph-up-arrow me-1"></i> Show Chart'
+      : '<i class="bi bi-x-circle me-1"></i> Hide Chart';
+  });
+
+  const ctx = document.getElementById('weeklyChart').getContext('2d');
+  const weeklyChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Paid', 'Unpaid'],
+      datasets: [{
+        label: 'Payment Status',
+        data: [{{ paid_this_week }}, {{ unpaid_this_week }}],
+        backgroundColor: ['#28a745', '#dc3545'],
+        borderColor: ['#28a745', '#dc3545'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        },
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              let total = context.dataset.data.reduce((a, b) => a + b, 0);
+              let value = context.parsed;
+              let percentage = ((value / total) * 100).toFixed(1);
+              return `${context.label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-4 rounded" style="background-color: #f8f9fa;">
+
+  <h2 class="mb-4 text-success">
+    <i class="bi bi-person-circle"></i> Member Dashboard
+  </h2>
+  <div class="alert {% if savings_position.status == 'Up to Date' %}alert-success{% elif savings_position.status == 'Ahead' %}alert-info{% else %}alert-warning{% endif %} shadow-sm">
+    <div class="fw-bold">Current savings period: {{ savings_position.current_week_label }}</div>
+    {% if savings_position.status == 'Behind' %}You are {{ savings_position.weeks_behind }} week{{ savings_position.weeks_behind|pluralize }} behind in Land Savings.
+    {% elif savings_position.status == 'Ahead' %}You are {{ savings_position.weeks_ahead }} week{{ savings_position.weeks_ahead|pluralize }} ahead in Land Savings.
+    {% elif savings_position.status == 'Partially Paid' %}You have partially paid {{ savings_position.partial_week }}. Outstanding balance: UGX {{ savings_position.partial_balance|floatformat:0 }}.
+    {% elif savings_position.status == 'Up to Date' %}Your Land Savings are up to date for {{ savings_position.current_week_label }}.
+    {% else %}Payment for {{ savings_position.current_week_label }} is required.{% endif %}
+    <div class="small mt-1">Latest week fully paid: {{ savings_position.latest_fully_paid|default:'None' }}</div>
+  </div>
+
+  <!-- Top Cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card bg-success text-white shadow-sm h-100 rounded-3">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-bank2 me-2"></i> Group Total Cash
+          </h5>
+          <p class="card-text fs-4">UGX {{ group_total_cash|floatformat:"0" }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-primary text-white shadow-sm h-100 rounded-3">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-piggy-bank me-2"></i> My Contributions
+          </h5>
+          <p class="card-text fs-4">UGX {{ user_total|floatformat:"0" }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-info text-white shadow-sm h-100 rounded-3">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-calendar-check me-2"></i> Weeks Paid
+          </h5>
+          <p class="card-text fs-4">{{ weeks_paid }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-danger text-white shadow-sm h-100 rounded-3">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-exclamation-triangle me-2"></i> Outstanding Fines
+          </h5>
+          <p class="card-text fs-4">UGX {{ outstanding_fines|floatformat:"0" }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="my-4">
+
+  <!-- Recent Deposits -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i> Recent Deposits</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive"><table class="table table-striped table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Weeks</th>
+            <th>Status</th>
+            <th>Proof</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for deposit in recent_deposits %}
+          <tr>
+            <td>{{ deposit.date_submitted|date:"M d, Y" }}</td>
+            <td>UGX {{ deposit.amount|floatformat:"0" }}</td>
+            <td>{{ deposit.weeks_covered }}</td>
+            <td>
+              {% if deposit.status == 'APPROVED' %}
+              <span class="badge bg-success">Approved</span>
+              {% elif deposit.status == 'REJECTED' %}
+              <span class="badge bg-danger">Rejected</span>
+              {% else %}
+              <span class="badge bg-warning text-dark">Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if deposit.proof %}
+              <a data-bs-toggle="modal" data-bs-target="#proofModal{{ deposit.id }}">
+                <img src="{{ deposit.proof.url }}" alt="Proof" width="60" height="60" class="img-thumbnail" title="Click to view full proof">
+              </a>
+
+              <!-- Modal -->
+              <div class="modal fade" id="proofModal{{ deposit.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                  <div class="modal-content">
+                    <div class="modal-body text-center">
+                      <img src="{{ deposit.proof.url }}" class="img-fluid" alt="Full proof of payment">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% else %}
+              <span class="text-muted">No proof</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted">No deposits submitted yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- Unpaid Fines -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-danger text-white">
+      <h5 class="mb-0"><i class="bi bi-exclamation-circle me-2"></i> Unpaid Fines</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Reason</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fine in unpaid_fines %}
+          <tr>
+            <td>{{ fine.date_issued }}</td>
+            <td>{{ fine.reason }}</td>
+            <td>UGX {{ fine.outstanding_balance }}</td>
+            <td><span class="badge bg-danger">{{ fine.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted">You have no unpaid fines.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

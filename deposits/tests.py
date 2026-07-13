@@ -1,0 +1,125 @@
+from datetime import timedelta
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from fines.models import Fine
+from groupcore.models import GroupSettings, MemberProfile
+from .forms import DepositSubmissionForm
+from .models import DepositSubmission, FinePaymentAllocation, SavingsAccount, WeeklySavingsAllocation
+from .services import approve_deposit, reject_deposit
+from .utils import savings_position
+
+
+class DepositAccountingTests(TestCase):
+    def setUp(self):
+        self.start = timezone.localdate() - timedelta(weeks=3)
+        self.settings = GroupSettings.objects.create(week_one_start=self.start, weekly_contribution=20000)
+        self.member = MemberProfile.objects.create_user(username='member', password='pw', role='MEMBER')
+        self.treasurer = MemberProfile.objects.create_user(username='treasurer', password='pw', role='TREASURER')
+        self.account = SavingsAccount.objects.create(member=self.member, account_number='LIG-00001')
+
+    def deposit(self, land=0, fine=0, selected_fine=None, status='PENDING', reference='TX-1', account=None):
+        return DepositSubmission.objects.create(
+            member=self.member, submitted_by=self.member, savings_account=account or self.account,
+            starting_week=self.start, weeks_covered=0, amount=Decimal(str(land + fine)),
+            land_savings_amount=Decimal(str(land)), fine_payment_amount=Decimal(str(fine)),
+            selected_fine=selected_fine, transaction_reference=reference,
+            payment_date=timezone.localdate(), payment_time=timezone.localtime().time(), status=status,
+        )
+
+    def test_land_savings_only_and_partial_week(self):
+        deposit = self.deposit(land=10000)
+        approve_deposit(deposit.id, self.treasurer)
+        allocation = WeeklySavingsAllocation.objects.get(deposit=deposit)
+        self.assertEqual(allocation.amount, Decimal('10000'))
+        self.assertEqual(savings_position(self.member)['partial_balance'], Decimal('10000'))
+
+    def test_payment_completes_partial_and_covers_several_weeks(self):
+        approve_deposit(self.deposit(land=10000, reference='A').id, self.treasurer)
+        second = self.deposit(land=50000, reference='B')
+        approve_deposit(second.id, self.treasurer)
+        amounts = list(second.weekly_allocations.values_list('amount', flat=True))
+        self.assertEqual(amounts, [Decimal('10000'), Decimal('20000'), Decimal('20000')])
+
+    def test_payment_can_place_member_ahead(self):
+        deposit = self.deposit(land=120000)
+        approve_deposit(deposit.id, self.treasurer)
+        position = savings_position(self.member)
+        self.assertGreaterEqual(position['weeks_ahead'], 1)
+
+    def test_partial_then_full_fine_payment(self):
+        fine = Fine.objects.create(member=self.member, reason='Late', amount=30000, issued_by=self.treasurer)
+        first = self.deposit(fine=10000, selected_fine=fine, reference='F1')
+        approve_deposit(first.id, self.treasurer)
+        fine.refresh_from_db()
+        self.assertEqual((fine.amount_paid, fine.status, fine.outstanding_balance), (Decimal('10000'), 'PARTIAL', Decimal('20000')))
+        second = self.deposit(fine=20000, selected_fine=fine, reference='F2')
+        approve_deposit(second.id, self.treasurer)
+        fine.refresh_from_db()
+        self.assertTrue(fine.is_paid)
+        self.assertEqual(fine.status, 'PAID')
+        self.assertEqual(FinePaymentAllocation.objects.filter(fine=fine).count(), 2)
+
+    def test_combined_payment_allocates_both_ledgers(self):
+        fine = Fine.objects.create(member=self.member, reason='Missed meeting', amount=15000, issued_by=self.treasurer)
+        deposit = self.deposit(land=20000, fine=15000, selected_fine=fine)
+        approve_deposit(deposit.id, self.treasurer)
+        self.assertEqual(deposit.weekly_allocations.count(), 1)
+        fine.refresh_from_db(); self.assertEqual(fine.status, 'PAID')
+
+    def test_rejected_and_pending_do_not_allocate(self):
+        deposit = self.deposit(land=20000)
+        reject_deposit(deposit.id, self.treasurer, 'Invalid proof')
+        self.assertFalse(WeeklySavingsAllocation.objects.filter(deposit=deposit).exists())
+        self.assertEqual(savings_position(self.member)['weeks_behind'], 3)
+
+    def test_duplicate_approval_is_blocked(self):
+        deposit = self.deposit(land=20000)
+        approve_deposit(deposit.id, self.treasurer)
+        with self.assertRaises(ValidationError): approve_deposit(deposit.id, self.treasurer)
+        self.assertEqual(WeeklySavingsAllocation.objects.filter(deposit=deposit).count(), 1)
+
+    def test_fine_overpayment_is_blocked_atomically(self):
+        fine = Fine.objects.create(member=self.member, reason='Late', amount=5000, issued_by=self.treasurer)
+        deposit = self.deposit(fine=6000, selected_fine=fine)
+        with self.assertRaises(ValidationError): approve_deposit(deposit.id, self.treasurer)
+        deposit.refresh_from_db(); fine.refresh_from_db()
+        self.assertEqual(deposit.status, 'PENDING'); self.assertEqual(fine.amount_paid, 0)
+
+    def test_multiple_savings_accounts_are_isolated(self):
+        second_account = SavingsAccount.objects.create(member=self.member, account_number='LIG-00001-B')
+        approve_deposit(self.deposit(land=20000, account=second_account).id, self.treasurer)
+        self.assertFalse(WeeklySavingsAllocation.objects.filter(savings_account=self.account).exists())
+        self.assertEqual(WeeklySavingsAllocation.objects.filter(savings_account=second_account).count(), 1)
+
+
+class DepositViewTests(DepositAccountingTests):
+    def test_only_treasurer_can_approve_and_endpoint_requires_post(self):
+        deposit = self.deposit(land=20000)
+        self.client.force_login(self.member)
+        self.assertEqual(self.client.get(reverse('approve_deposit', args=[deposit.id])).status_code, 405)
+        self.client.post(reverse('approve_deposit', args=[deposit.id]))
+        deposit.refresh_from_db(); self.assertEqual(deposit.status, 'PENDING')
+
+    def test_filtered_contribution_csv_and_member_scope(self):
+        approve_deposit(self.deposit(land=20000, reference='VISIBLE').id, self.treasurer)
+        other = MemberProfile.objects.create_user(username='other', password='pw')
+        other_account = SavingsAccount.objects.create(member=other, account_number='OTHER')
+        DepositSubmission.objects.create(member=other, submitted_by=other, savings_account=other_account,
+            starting_week=self.start, weeks_covered=0, amount=99999, land_savings_amount=99999,
+            payment_date=timezone.localdate(), payment_time=timezone.localtime().time(), transaction_reference='HIDDEN')
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('download_my_contributions', args=['csv']), {'status': 'APPROVED'})
+        body = response.content.decode()
+        self.assertIn('VISIBLE', body); self.assertNotIn('HIDDEN', body)
+
+    def test_contribution_pagination_preserves_filter(self):
+        for index in range(25): self.deposit(land=100, reference=f'P-{index}')
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('my_contributions'), {'status': 'PENDING'})
+        self.assertEqual(len(response.context['deposits']), 20)
+        self.assertContains(response, 'status=PENDING&amp;page=2')

@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4 text-success"><i class="bi bi-cash-stack me-2"></i> Other Income Records</h2>
+
+  <a href="{% url 'add_income' %}" class="btn btn-sm btn-primary mb-3">
+    <i class="bi bi-plus-circle me-1"></i> Add Income
+  </a>
+
+  <table class="table table-bordered table-striped">
+    <thead class="table-light">
+      <tr>
+        <th>Date</th>
+        <th>Source</th>
+        <th>Amount</th>
+        <th>Description</th>
+        <th>Fine Ref</th>
+        <th>Recorded By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for income in incomes %}
+        <tr>
+          <td>{{ income.date_received }}</td>
+          <td>{{ income.get_source_display }}</td>
+          <td>UGX {{ income.amount|floatformat:"0" }}</td>
+          <td>{{ income.description|default:"-" }}</td>
+          <td>{% if income.fine %}
+                {{ income.fine.id }}
+                {% else %}
+                -
+                {% endif %}
+            </td>
+          <td>{{ income.recorded_by.get_full_name|default:income.recorded_by.username }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">No other income recorded.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'includes/pagination.html' with page_obj=incomes %}{% endblock %}

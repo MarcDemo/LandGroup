@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Manage Fines</h2>
+<a class="btn btn-primary mb-3" href="{% url 'add_fine' %}">Add Fine</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Member</th>
+            <th>Reason</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Issued By</th>
+            <th>Date</th>
+            <th>Mark Paid</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fine in fines %}
+        <tr>
+            <td>{{ fine.member.username }}</td>
+            <td>{{ fine.reason }}</td>
+            <td>UGX {{ fine.amount }}</td>
+            <td>
+                {% if fine.is_paid %}
+                    <span class="text-success">Paid</span>
+                {% else %}
+                    <span class="text-danger">Unpaid</span>
+                {% endif %}
+            </td>
+            <td>{{ fine.issued_by.username }}</td>
+            <td>{{ fine.date_issued }}</td>
+            <td>
+                {% if not fine.is_paid %}
+                    <a class="btn btn-sm btn-success" href="{% url 'mark_fine_paid' fine.id %}">Mark Paid</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include 'includes/pagination.html' with page_obj=fines %}{% endblock %}

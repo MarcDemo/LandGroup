@@ -1,0 +1,208 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Login</title>
+  
+    <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{% static 'images/favicon1.ico' %}" />
+  
+  <!-- Bootstrap CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1 Arguments: .10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <style>
+    /* Background wave animation */
+    body, html {
+      height: 100%;
+      margin: 0;
+      background: url("{% static 'images/land_savings.webp' %}") no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      animation: waveMove 30s ease-in-out infinite;
+    }
+
+    @keyframes waveMove {
+      0% { background-position: 0% 50%; background-size: 100%; }
+      50% { background-position: 100% 50%; background-size: 105%; }
+      100% { background-position: 0% 50%; background-size: 100%; }
+    }
+
+    /* Glass card */
+    .glass-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 1rem;
+      padding: 2.5rem 2rem 2rem 2rem;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      max-width: 400px;
+      width: 100%;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeSlideIn 1.5s ease forwards;
+      animation-delay: 0.5s;
+    }
+
+    /* Diagonal light sweep */
+    .glass-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: rotate(25deg) translateX(-100%);
+      animation: lightSweep 12s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes lightSweep {
+      0%, 85%, 100% { transform: rotate(25deg) translateX(-120%); }
+      50% { transform: rotate(25deg) translateX(120%); }
+    }
+
+    @keyframes fadeSlideIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    label { color: #eee; font-weight: 600; }
+    .messages p { color: #ff6b6b; font-weight:600; }
+
+    .form-control {
+      background-color: rgba(255, 255, 255, 0.25);
+      border: none;
+      color: #fff;
+      font-weight: 500;
+    }
+    .form-control:focus {
+      background-color: rgba(255, 255, 255, 0.45);
+      color: #000;
+      box-shadow: none;
+    }
+
+    .btn-primary {
+      background-color: #0d6efd;
+      border: none;
+      font-weight: 600;
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .btn-primary:hover {
+      background-color: #084cd9;
+      transform: scale(1.03);
+    }
+
+    .welcome-message {
+      font-size: 1.15rem;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+      color: #0d0b0bdd;
+    }
+
+    /* Change Forgot Password link color to black */
+    .forgot-password {
+      color: #000 !important;
+      text-decoration: none;
+    }
+    .forgot-password:hover {
+      color: #333 !important;
+      text-decoration: underline;
+    }
+
+    /* Mobile responsiveness for screens like iPhone 12 Pro */
+    @media (max-width: 576px) {
+      .glass-card {
+        max-width: 90%;
+        padding: 1.5rem 1.25rem;
+        border-radius: 0.75rem;
+      }
+
+      .welcome-message {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      .form-control {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+      }
+
+      .btn-primary {
+        font-size: 1rem;
+        padding: 0.5rem;
+      }
+
+      body, html {
+        background-size: cover;
+        background-position: center;
+      }
+    }
+
+    /* Ensure high-quality background image for high-density displays */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      body, html {
+        background-image: url("{% static 'images/land_savings.webp' %}");
+        background-size: cover;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="d-flex justify-content-center align-items-center vh-100">
+    <div class="glass-card text-center">
+      <h2 class="mb-3">Welcome Back!</h2>
+      <p class="welcome-message">Please login to access your account and manage your investments securely.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3 text-start">
+          <label for="id_username" class="form-label">Username</label>
+          <input type="text" class="form-control" id="id_username" name="username" placeholder="Enter username" required />
+        </div>
+        <div class="mb-4 text-start">
+          <label for="id_password" class="form-label">Password</label>
+          <input type="password" class="form-control" id="id_password" name="password" placeholder="Enter password" required />
+        </div>
+        <button type="submit" class="btn btn-primary mb-3">
+          <i class="bi bi-box-arrow-in-right me-2"></i> Login
+        </button>
+        <p class="mt-2">
+          <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
+        </p>
+      </form>
+
+      <div class="messages">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Footer below card -->
+      <div class="mt-6 small text-muted d-flex justify-content-center align-items-center">
+        <img src="{% static 'images/deaplogof.webp' %}" alt="Deap Technologies Logo" style="height: 40px; margin-right: 8px;">
+        <span>Powered by Deap Technologies</span>
+      </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

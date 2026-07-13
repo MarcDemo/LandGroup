@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4 text-primary"><i class="bi bi-plus-circle me-2"></i> Add Other Income</h2>
+
+  <form method="post" class="card p-4 shadow-sm">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Source</label>
+        {{ form.source|add_class:"form-select" }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Fine (if applicable)</label>
+        {{ form.fine|add_class:"form-select" }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Amount</label>
+        {{ form.amount|add_class:"form-control" }}
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">Description</label>
+        {{ form.description|add_class:"form-control" }}
+      </div>
+    </div>
+
+    <div class="mt-4 text-end">
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-check-circle me-1"></i> Save Income
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3 class="text-center mb-4"><i class="bi bi-wallet2"></i> Member Deposits Report</h3>
+
+  <form method="get" class="mb-3 row g-2" id="filter-form">
+    <div class="col-md-4">
+      <input type="text" name="name" value="{{ name_query }}" class="form-control" placeholder="Search by member name">
+    </div>
+    <div class="col-md-3">
+      <select name="year" class="form-select">
+      <option value="">-- Filter by Year --</option>
+      {% for y in years %}
+        <option value="{{ y|date:'Y' }}" {% if y|date:'Y' == year_query %}selected{% endif %}>
+          {{ y|date:'Y' }}
+        </option>
+      {% endfor %}
+    </select>
+    </div>
+    <div class="col-md-3">
+      <select name="month" class="form-select">
+        <option value="">-- Filter by Month --</option>
+        {% for num, name in months %}
+          <option value="{{ num }}" {% if num|stringformat:"s" == month_query %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Filter</button>
+    </div>
+
+    <div class="col-md-1">
+      <button type="submit" name="export" value="pdf" class="btn btn-success w-100">PDF</button>
+    </div>
+
+    <!-- Clear Filters Button -->
+    <div class="col-md-2">
+      <button type="button" class="btn btn-secondary w-100" id="clear-btn">Clear</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover table-sm">
+      <thead class="table-primary text-center">
+        <tr>
+          <th>#</th>
+          <th>Member</th>
+          <th>Amount</th>
+          <th>Payment Date</th>
+          <th>Payment time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for deposit in deposits %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ deposit.member.username }}</td>
+          <td>UGX {{ deposit.amount }}</td>
+          <td>{{ deposit.payment_date }}</td>
+          <td>{{ deposit.payment_time }}</td>
+          <td>{{ deposit.status }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center">No deposits found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.getElementById('clear-btn').addEventListener('click', function() {
+    const form = document.getElementById('filter-form');
+    form.reset(); // Clears all fields
+    window.location.href = "{% url 'chairman_deposit_report' %}";
+});
+</script>
+{% include 'includes/pagination.html' with page_obj=deposits %}{% endblock %}

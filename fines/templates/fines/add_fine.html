@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Add Fine</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-primary">Add Fine</button>
+</form>
+
+<a href="{% url 'manage_fines' %}">← Back to Fine Management</a>
+{% endblock %}

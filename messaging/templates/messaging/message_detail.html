@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h4><i class="bi bi-envelope-open"></i> {{ message.subject }}</h4>
+  <p>
+      <strong>
+        {% if from_inbox %}
+          From:
+        {% else %}
+          To:
+        {% endif %}
+      </strong>
+      {% if from_inbox %}
+        {{ message.sender }}
+      {% else %}
+        {% for recipient in message.recipients.all %}
+          {{ recipient }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      {% endif %}
+    </p>
+  <p><strong>Date:</strong> {{ message.sent_at|date:"M d, Y H:i" }}</p>
+  <hr>
+  <p>{{ message.body }}</p>
+  <a href="{% url 'reply_message' message.id %}" class="btn btn-outline-primary mt-3">
+    <i class="bi bi-reply"></i> Reply
+  </a>
+</div>
+{% endblock %}

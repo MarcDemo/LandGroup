@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h3><i class="bi bi-send"></i> Compose Message</h3>
+  <form method="post" class="card p-4 shadow-sm">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-success"><i class="bi bi-send-fill me-1"></i> Send</button>
+  </form>
+</div>
+{% endblock %}

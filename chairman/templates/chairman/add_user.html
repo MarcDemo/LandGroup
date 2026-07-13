@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+      
+      <div class="card shadow-sm border-0 rounded">
+        <div class="card-header bg-primary text-white text-center py-3">
+          <h4 class="mb-0"><i class="bi bi-person-plus-fill"></i> Add New User</h4>
+        </div>
+        
+        <div class="card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- Username -->
+            <div class="mb-3">
+              <label for="id_username" class="form-label">Username</label>
+              {{ form.username|add_class:"form-control" }}
+              {% if form.username.help_text %}
+                <div class="form-text">{{ form.username.help_text|safe }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="mb-3">
+              <label for="id_email" class="form-label">Email</label>
+              {{ form.email|add_class:"form-control" }}
+            </div>
+
+            <!-- Role -->
+            <div class="mb-3">
+              <label for="id_role" class="form-label">Role</label>
+              {{ form.role|add_class:"form-select" }}
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+              <label for="id_password" class="form-label">Password</label>
+              {{ form.password|add_class:"form-control" }}
+            </div>
+
+            <!-- Buttons -->
+            <div class="text-end mt-4">
+              <a href="{% url 'manage_users' %}" class="btn btn-secondary me-2">
+                <i class="bi bi-arrow-left-circle"></i> Back
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Create User
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
