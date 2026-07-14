@@ -3,6 +3,7 @@ from groupcore.models import MemberProfile
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+import uuid
 
 # Create your models here.
 
@@ -48,6 +49,20 @@ class DepositSubmission(models.Model):
 
     def __str__(self):
         return f"{self.member.username} - UGX {self.amount} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        generated_reference = False
+        if not self.transaction_reference:
+            prefix = timezone.localdate().strftime('LIG-%Y%m%d')
+            while True:
+                candidate = f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+                if not type(self).objects.filter(transaction_reference=candidate).exists():
+                    self.transaction_reference = candidate
+                    generated_reference = True
+                    break
+        if generated_reference and kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'transaction_reference'}
+        super().save(*args, **kwargs)
 
     def get_covered_weeks(self):
         from datetime import timedelta

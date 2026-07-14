@@ -7,8 +7,7 @@
       <p class="text-muted">Select one or both categories. The total is recalculated on the server before the transaction is saved.</p>
       <form id="deposit-form" method="post" enctype="multipart/form-data" class="row g-3" novalidate>{% csrf_token %}
         {% if form.non_field_errors %}<div class="col-12 alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-        <div class="col-md-6"><label class="form-label">Savings account</label>{{ form.savings_account|add_class:'form-select' }}{{ form.savings_account.errors }}</div>
-        <div class="col-md-6"><label class="form-label">Transaction reference</label>{{ form.transaction_reference|add_class:'form-control' }}</div>
+        <div class="col-12"><label class="form-label">Savings account</label>{{ form.savings_account|add_class:'form-select' }}{{ form.savings_account.errors }}<div class="form-text"><i class="bi bi-shield-check me-1"></i>A secure transaction reference will be generated automatically.</div></div>
         <div class="col-12"><h2 class="h6 text-uppercase text-muted mt-2">Deposit categories</h2></div>
         <div class="col-md-6">
           <div class="category-card border rounded p-3 h-100">

@@ -67,6 +67,16 @@ class DepositAccountingTests(TestCase):
         self.assertEqual(allocation.amount, Decimal('10000'))
         self.assertEqual(savings_position(self.member)['partial_balance'], Decimal('10000'))
 
+    def test_transaction_reference_is_generated_automatically(self):
+        deposit = self.deposit(land=20000, reference='')
+        self.assertRegex(deposit.transaction_reference, r'^LIG-\d{8}-[A-F0-9]{8}$')
+        second = self.deposit(land=20000, reference='')
+        self.assertNotEqual(deposit.transaction_reference, second.transaction_reference)
+
+    def test_transaction_reference_is_not_user_editable(self):
+        form = DepositSubmissionForm(member=self.member)
+        self.assertNotIn('transaction_reference', form.fields)
+
     def test_payment_completes_partial_and_covers_several_weeks(self):
         approve_deposit(self.deposit(land=10000, reference='A').id, self.treasurer)
         second = self.deposit(land=50000, reference='B')

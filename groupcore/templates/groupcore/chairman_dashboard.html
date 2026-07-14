@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container mt-4">
 
-  <h2 class="mb-4 text-primary">
+  <span class="badge text-bg-success mb-2">Executive overview</span><h2 class="mb-4 text-primary">
     <i class="bi bi-briefcase-fill me-2"></i> Chairman Dashboard
   </h2>
 
@@ -12,8 +12,7 @@
   <div class="row g-3 mb-4">
     {% for card in summary_cards %}
     <div class="col-6 col-md-3 col-lg-2">
-      <div class="card h-100 shadow-sm text-{{ card.color }}" 
-           style="background-color: {% if card.color == 'success' %}#d1e7dd{% elif card.color == 'info' %}#cff4fc{% elif card.color == 'danger' %}#f8d7da{% elif card.color == 'warning' %}#fff3cd{% elif card.color == 'secondary' %}#e2e3e5{% elif card.color == 'dark' %}#d3d3d4{% elif card.color == 'primary' %}#cfe2ff{% else %}#f8f9fa{% endif %}; border-color: transparent; border-radius: 0.5rem;">
+      <div class="card metric-card h-100 text-{{ card.color }}">
         <div class="card-body text-center p-3">
           <h6 class="text-uppercase mb-1" style="font-size: 0.75rem;">
             {% if card.title == 'Total Members' %}<i class="bi bi-people-fill me-1"></i>{% endif %}

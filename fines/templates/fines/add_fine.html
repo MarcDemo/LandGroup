@@ -1,12 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load crispy_forms_tags %}
 {% block content %}
-<h2>Add Fine</h2>
-
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary">Add Fine</button>
-</form>
-
-<a href="{% url 'manage_fines' %}">← Back to Fine Management</a>
+<div class="container-narrow py-3"><div class="mb-4"><span class="badge text-bg-danger mb-2">Treasury</span><h1 class="h3 mb-1">Issue a fine</h1><p class="text-muted">Record the member, reason, and original fine amount.</p></div><div class="card"><div class="card-body p-3 p-md-4"><form method="post">{% csrf_token %}{{ form|crispy }}<div class="d-flex justify-content-end gap-2 mt-4"><a href="{% url 'manage_fines' %}" class="btn btn-light">Cancel</a><button class="btn btn-danger"><i class="bi bi-receipt-cutoff me-1"></i>Issue fine</button></div></form></div></div></div>
 {% endblock %}

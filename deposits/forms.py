@@ -18,7 +18,7 @@ class DepositSubmissionForm(forms.ModelForm):
 
     class Meta:
         model = DepositSubmission
-        fields = ['savings_account', 'transaction_reference', 'payment_date', 'payment_time',
+        fields = ['savings_account', 'payment_date', 'payment_time',
                   'proof', 'remarks', 'include_land_savings', 'land_savings_amount',
                   'include_fine_payment', 'fine_payment_amount', 'selected_fine']
 

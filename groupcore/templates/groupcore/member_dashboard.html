@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="p-4 rounded" style="background-color: #f8f9fa;">
+<div class="container-fluid py-3">
 
-  <h2 class="mb-4 text-success">
+  <div class="d-flex justify-content-between align-items-center mb-4"><div><span class="badge text-bg-success mb-2">My account</span><h2 class="mb-0 text-success">
     <i class="bi bi-person-circle"></i> Member Dashboard
-  </h2>
+  </h2></div><a href="{% url 'submit_deposit' %}" class="btn btn-success d-none d-md-inline-flex"><i class="bi bi-plus-lg me-1"></i>Make a deposit</a></div>
   <div class="alert {% if savings_position.status == 'Up to Date' %}alert-success{% elif savings_position.status == 'Ahead' %}alert-info{% else %}alert-warning{% endif %} shadow-sm">
     <div class="fw-bold">Current savings period: {{ savings_position.current_week_label }}</div>
     {% if savings_position.status == 'Behind' %}You are {{ savings_position.weeks_behind }} week{{ savings_position.weeks_behind|pluralize }} behind in Land Savings.
