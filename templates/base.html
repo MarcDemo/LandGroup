@@ -254,6 +254,9 @@
   #sidebar .text-muted { color: #7f95a2 !important; }
   #sidebar .dropdown-menu.sidebar-dropdown { background: transparent !important; }
   #sidebar .dropdown-menu.sidebar-dropdown a { color: #aebfc8 !important; }
+  #sidebar .sidebar-logout { color:#ffb4ad; border:1px solid rgba(255,125,114,.3); background:rgba(224,55,45,.08); }
+  #sidebar .sidebar-logout i { color:#ff8d83; }
+  #sidebar .sidebar-logout:hover { color:#fff !important; border-color:rgba(255,141,131,.55); background:rgba(224,55,45,.2); }
   #main-content { margin-left: 272px; margin-top: 68px; min-height: calc(100vh - 68px); padding: 2rem clamp(1rem, 3vw, 3rem) 3rem; background: var(--lg-canvas); }
   #main-content > .container, #main-content > .container-fluid { max-width: 1500px; }
   #main-content h1, #main-content h2, #main-content h3, #main-content h4 { color: var(--lg-ink) !important; letter-spacing: -.025em; font-weight: 750; }
@@ -681,6 +684,11 @@
         <li class="nav-item mt-3 px-3">
           <a class="nav-link" href="{% url 'my_profile' %}">
             <i class="bi bi-person-circle me-2"></i> My Profile
+          </a>
+        </li>
+        <li class="nav-item mt-2 px-3">
+          <a class="nav-link sidebar-logout" href="{% url 'logout' %}">
+            <i class="bi bi-box-arrow-right me-2"></i> Quick Logout
           </a>
         </li>
         

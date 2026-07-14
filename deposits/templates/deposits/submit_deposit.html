@@ -4,23 +4,23 @@
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-success text-white p-3"><h1 class="h4 mb-0"><i class="bi bi-wallet2 me-2"></i>Submit a Deposit</h1></div>
     <div class="card-body p-3 p-md-4">
-      <p class="text-muted">Select one or both categories. The total is recalculated on the server before the transaction is saved.</p>
+      <p class="text-muted">{% if form.include_fine_payment %}Select one or both categories.{% else %}Enter the Land Savings amount you are depositing.{% endif %} The total is recalculated on the server before the transaction is saved.</p>
       <form id="deposit-form" method="post" enctype="multipart/form-data" class="row g-3" novalidate>{% csrf_token %}
         {% if form.non_field_errors %}<div class="col-12 alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
         <div class="col-12"><label class="form-label">Savings account</label>{{ form.savings_account|add_class:'form-select' }}{{ form.savings_account.errors }}<div class="form-text"><i class="bi bi-shield-check me-1"></i>A secure transaction reference will be generated automatically.</div></div>
         <div class="col-12"><h2 class="h6 text-uppercase text-muted mt-2">Deposit categories</h2></div>
-        <div class="col-md-6">
+        <div class="{% if form.include_fine_payment %}col-md-6{% else %}col-12{% endif %}">
           <div class="category-card border rounded p-3 h-100">
             <div class="form-check form-switch">{{ form.include_land_savings|add_class:'form-check-input' }}<label class="form-check-label fw-semibold" for="id_include_land_savings">Land Savings</label></div>
             <div id="land-fields" class="mt-3 d-none"><label class="form-label">Land Savings amount (UGX)</label>{{ form.land_savings_amount|add_class:'form-control amount-input' }}{{ form.land_savings_amount.errors }}</div>
           </div>
         </div>
-        <div class="col-md-6">
+        {% if form.include_fine_payment %}<div class="col-md-6">
           <div class="category-card border rounded p-3 h-100">
             <div class="form-check form-switch">{{ form.include_fine_payment|add_class:'form-check-input' }}<label class="form-check-label fw-semibold" for="id_include_fine_payment">Fine Payment</label></div>
             <div id="fine-fields" class="mt-3 d-none"><label class="form-label">Fine amount (UGX)</label>{{ form.fine_payment_amount|add_class:'form-control amount-input' }}{{ form.fine_payment_amount.errors }}<label class="form-label mt-2">Allocate to</label>{{ form.selected_fine|add_class:'form-select' }}{{ form.selected_fine.errors }}</div>
           </div>
-        </div>
+        </div>{% endif %}
         <div class="col-12"><div class="total-panel rounded p-3 d-flex justify-content-between align-items-center"><span class="fw-semibold">Total Deposit</span><strong class="fs-4" id="deposit-total">UGX 0</strong></div></div>
         <div class="col-md-6"><label class="form-label">Payment date</label>{{ form.payment_date|add_class:'form-control' }}{{ form.payment_date.errors }}</div>
         <div class="col-md-6"><label class="form-label">Payment time</label>{{ form.payment_time|add_class:'form-control' }}{{ form.payment_time.errors }}</div>
@@ -36,5 +36,5 @@
 document.addEventListener('DOMContentLoaded',()=>{
  const pairs=[['id_include_land_savings','land-fields','id_land_savings_amount'],['id_include_fine_payment','fine-fields','id_fine_payment_amount']];
  const total=()=>{let n=0;document.querySelectorAll('.amount-input').forEach(i=>n+=Number(i.value)||0);document.getElementById('deposit-total').textContent='UGX '+n.toLocaleString();};
- pairs.forEach(([check,box,input])=>{const c=document.getElementById(check),b=document.getElementById(box),i=document.getElementById(input);const toggle=()=>{b.classList.toggle('d-none',!c.checked);if(!c.checked)i.value='';total();};c.addEventListener('change',toggle);i.addEventListener('input',total);toggle();}); total();
+ pairs.forEach(([check,box,input])=>{const c=document.getElementById(check),b=document.getElementById(box),i=document.getElementById(input);if(!c||!b||!i)return;const toggle=()=>{b.classList.toggle('d-none',!c.checked);if(!c.checked)i.value='';total();};c.addEventListener('change',toggle);i.addEventListener('input',total);toggle();}); total();
 });</script>{% endblock %}

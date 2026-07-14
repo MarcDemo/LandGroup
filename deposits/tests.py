@@ -77,6 +77,27 @@ class DepositAccountingTests(TestCase):
         form = DepositSubmissionForm(member=self.member)
         self.assertNotIn('transaction_reference', form.fields)
 
+    def test_member_without_outstanding_fine_has_no_fine_payment_option(self):
+        form = DepositSubmissionForm(member=self.member)
+        self.assertNotIn('include_fine_payment', form.fields)
+        self.assertNotIn('fine_payment_amount', form.fields)
+        self.assertNotIn('selected_fine', form.fields)
+
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('submit_deposit'))
+        self.assertNotContains(response, 'Fine Payment')
+
+    def test_member_with_outstanding_fine_has_fine_payment_option(self):
+        Fine.objects.create(
+            member=self.member, reason='Late', amount=30000, issued_by=self.treasurer
+        )
+        form = DepositSubmissionForm(member=self.member)
+        self.assertIn('include_fine_payment', form.fields)
+
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('submit_deposit'))
+        self.assertContains(response, 'Fine Payment')
+
     def test_treasurer_direct_form_has_no_category_toggle_boxes(self):
         form = DirectDepositForm()
         self.assertNotIn('include_land_savings', form.fields)

@@ -22,6 +22,8 @@ class MobileAppShellTests(TestCase):
         self.assertContains(response, reverse('submit_deposit'))
         self.assertContains(response, reverse('my_contributions'))
         self.assertContains(response, '>Deposit</span>', html=False)
+        self.assertContains(response, 'sidebar-logout')
+        self.assertContains(response, reverse('logout'))
 
     def test_treasurer_gets_role_specific_mobile_actions(self):
         treasurer = MemberProfile.objects.create_user(

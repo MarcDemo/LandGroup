@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import F
 from groupcore.models import MemberProfile
 from fines.models import Fine
 from .models import DepositSubmission, SavingsAccount
@@ -29,7 +30,14 @@ class DepositSubmissionForm(forms.ModelForm):
         self.member = member
         if member:
             self.fields['savings_account'].queryset = SavingsAccount.objects.filter(member=member, is_active=True)
-            self.fields['selected_fine'].queryset = Fine.objects.filter(member=member).exclude(status='PAID')
+            outstanding_fines = Fine.objects.filter(
+                member=member, amount__gt=F('amount_paid')
+            ).exclude(status='PAID')
+            self.fields['selected_fine'].queryset = outstanding_fines
+            if not outstanding_fines.exists():
+                self.fields.pop('include_fine_payment', None)
+                self.fields.pop('fine_payment_amount', None)
+                self.fields.pop('selected_fine', None)
         elif 'member' in self.fields:
             self.fields['savings_account'].queryset = SavingsAccount.objects.filter(is_active=True).select_related('member')
             self.fields['selected_fine'].queryset = Fine.objects.exclude(status='PAID').select_related('member')
