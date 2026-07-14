@@ -23,7 +23,7 @@ class DepositSubmissionForm(forms.ModelForm):
                   'proof', 'remarks', 'include_land_savings', 'land_savings_amount',
                   'include_fine_payment', 'fine_payment_amount', 'selected_fine']
 
-    def __init__(self, *args, member=None, **kwargs):
+    def __init__(self, *args, member=None, hide_fine_fields_without_balance=True, **kwargs):
         super().__init__(*args, **kwargs)
         if member is None and self.data.get('member'):
             member = MemberProfile.objects.filter(pk=self.data.get('member')).first()
@@ -34,7 +34,7 @@ class DepositSubmissionForm(forms.ModelForm):
                 member=member, amount__gt=F('amount_paid')
             ).exclude(status='PAID')
             self.fields['selected_fine'].queryset = outstanding_fines
-            if not outstanding_fines.exists():
+            if hide_fine_fields_without_balance and not outstanding_fines.exists():
                 self.fields.pop('include_fine_payment', None)
                 self.fields.pop('fine_payment_amount', None)
                 self.fields.pop('selected_fine', None)
@@ -71,7 +71,7 @@ class DirectDepositForm(DepositSubmissionForm):
                   'fine_payment_amount', 'selected_fine']
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, hide_fine_fields_without_balance=False, **kwargs)
         self.fields.pop('include_land_savings', None)
         self.fields.pop('include_fine_payment', None)
         self.fields['land_savings_amount'].label = 'Land Savings amount'

@@ -103,6 +103,12 @@ class DepositAccountingTests(TestCase):
         self.assertNotIn('include_land_savings', form.fields)
         self.assertNotIn('include_fine_payment', form.fields)
 
+    def test_treasurer_direct_form_keeps_amount_fields_for_member_without_fine(self):
+        form = DirectDepositForm(data={'member': self.member.pk})
+        self.assertIn('land_savings_amount', form.fields)
+        self.assertIn('fine_payment_amount', form.fields)
+        self.assertIn('selected_fine', form.fields)
+
     def test_payment_completes_partial_and_covers_several_weeks(self):
         approve_deposit(self.deposit(land=10000, reference='A').id, self.treasurer)
         second = self.deposit(land=50000, reference='B')
@@ -163,6 +169,26 @@ class DepositAccountingTests(TestCase):
 
 
 class DepositViewTests(DepositAccountingTests):
+    def test_treasurer_can_post_direct_deposit_for_member_without_fine(self):
+        self.client.force_login(self.treasurer)
+
+        response = self.client.post(reverse('manage_deposits'), {
+            'direct_deposit': '1',
+            'member': self.member.pk,
+            'savings_account': self.account.pk,
+            'land_savings_amount': '20000',
+            'fine_payment_amount': '',
+            'selected_fine': '',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '12:30',
+            'remarks': '',
+        })
+
+        self.assertRedirects(response, reverse('manage_deposits'))
+        deposit = DepositSubmission.objects.latest('id')
+        self.assertEqual(deposit.status, 'APPROVED')
+        self.assertEqual(deposit.land_savings_amount, Decimal('20000'))
+
     def test_manage_deposits_renders_thumbnail_and_expanded_proof_modal(self):
         deposit = self.deposit(land=20000)
         deposit.proof = 'proofs/payment-proof.jpg'
