@@ -32,3 +32,11 @@ class MobileAppShellTests(TestCase):
         self.assertContains(response, 'mobile-tabbar')
         self.assertContains(response, reverse('manage_deposits'))
         self.assertContains(response, reverse('treasurer_reports'))
+
+    def test_login_has_group_title_and_rotating_images(self):
+        response = self.client.get(reverse('login'))
+        self.assertContains(response, 'Land Investment Group')
+        self.assertContains(response, 'auth-slideshow')
+        self.assertContains(response, 'images/land_savings.webp')
+        self.assertContains(response, 'images/jar_savings.webp')
+        self.assertContains(response, 'images/jar_and_coins.webp')

@@ -230,4 +230,8 @@ def current_week_payment_status(request):
     if not (request.user.is_treasurer() or request.user.is_chairman() or request.user.is_mobilizer()): return redirect('member_dashboard')
     data = [{'member': m, 'position': savings_position(m)} for m in MemberProfile.objects.exclude(is_superuser=True)]
     current_label = data[0]['position']['current_week_label'] if data else week_label(timezone.localdate())
-    return render(request, 'deposits/current_week_status.html', {'members_status': _page(request, data), 'current_week_label': current_label})
+    return render(request, 'deposits/current_week_status.html', {
+        'paid_members': [row for row in data if not row['position']['current_week_due']],
+        'unpaid_members': [row for row in data if row['position']['current_week_due']],
+        'current_week_label': current_label,
+    })

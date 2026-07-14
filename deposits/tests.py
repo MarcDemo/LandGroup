@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from fines.models import Fine
 from groupcore.models import GroupSettings, MemberProfile
-from .forms import DepositSubmissionForm
+from .forms import DepositSubmissionForm, DirectDepositForm
 from .models import DepositSubmission, FinePaymentAllocation, SavingsAccount, WeeklySavingsAllocation
 from .services import approve_deposit, reject_deposit
 from .utils import group_week_info, savings_position, week_label
@@ -77,6 +77,11 @@ class DepositAccountingTests(TestCase):
         form = DepositSubmissionForm(member=self.member)
         self.assertNotIn('transaction_reference', form.fields)
 
+    def test_treasurer_direct_form_has_no_category_toggle_boxes(self):
+        form = DirectDepositForm()
+        self.assertNotIn('include_land_savings', form.fields)
+        self.assertNotIn('include_fine_payment', form.fields)
+
     def test_payment_completes_partial_and_covers_several_weeks(self):
         approve_deposit(self.deposit(land=10000, reference='A').id, self.treasurer)
         second = self.deposit(land=50000, reference='B')
@@ -137,6 +142,16 @@ class DepositAccountingTests(TestCase):
 
 
 class DepositViewTests(DepositAccountingTests):
+    def test_current_week_status_separates_paid_and_unpaid_members(self):
+        unpaid = MemberProfile.objects.create_user(username='unpaid', password='pw')
+        approve_deposit(self.deposit(land=80000).id, self.treasurer)
+        self.client.force_login(self.treasurer)
+        response = self.client.get(reverse('current_week_status'))
+        paid_ids = [row['member'].id for row in response.context['paid_members']]
+        unpaid_ids = [row['member'].id for row in response.context['unpaid_members']]
+        self.assertIn(self.member.id, paid_ids)
+        self.assertIn(unpaid.id, unpaid_ids)
+
     def test_only_treasurer_can_approve_and_endpoint_requires_post(self):
         deposit = self.deposit(land=20000)
         self.client.force_login(self.member)

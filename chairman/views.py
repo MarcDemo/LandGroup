@@ -208,7 +208,11 @@ def chairman_weekly_payment_status(request):
     today = date.today()
     rows = [{'member': member, 'position': savings_position(member)} for member in MemberProfile.objects.exclude(is_superuser=True)]
     current_label = rows[0]['position']['current_week_label'] if rows else week_label(today)
-    context = {'current_week_label': current_label, 'members_status': Paginator(rows, 20).get_page(request.GET.get('page'))}
+    context = {
+        'current_week_label': current_label,
+        'paid_members': [row for row in rows if not row['position']['current_week_due']],
+        'unpaid_members': [row for row in rows if row['position']['current_week_due']],
+    }
     return render(request, 'chairman/current_week_status.html', context)
 
 

@@ -277,10 +277,11 @@
   .btn-outline-primary:hover, .btn-outline-success:hover { color: #fff; background: var(--lg-brand); border-color: var(--lg-brand); }
   .form-label { color: #344054; font-size: .84rem; font-weight: 700; margin-bottom: .42rem; }
   .form-control, .form-select { min-height: 46px; padding: .65rem .8rem; border: 1px solid #d8e0e7; border-radius: .72rem; background-color: #fff; }
-  textarea.form-control { min-height: 110px; }
+  textarea.form-control { min-height: 110px; height: 110px; max-height: 180px; }
   .form-control:focus, .form-select:focus { border-color: #65c3a3; box-shadow: 0 0 0 .22rem rgba(15,138,95,.11); }
   .form-text { color: var(--lg-muted); }
-  .table-responsive { border-radius: .9rem; }
+  .table-responsive { border-radius: .9rem; overflow-x: auto !important; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .table-responsive > table { min-width: 100%; width: max-content; }
   .table { --bs-table-bg: transparent; margin-bottom: 0; }
   .table > :not(caption) > * > * { padding: .9rem .85rem; border-bottom-color: var(--lg-line); }
   .table thead th { color: #667085; background: #f8faf9; font-size: .7rem; letter-spacing: .07em; border-bottom-width: 1px; }
@@ -727,6 +728,14 @@
     document.getElementById('mobileMore')?.addEventListener('click', toggleSidebar);
     document.getElementById('sidebarBackdrop')?.addEventListener('click', closeSidebar);
     document.querySelectorAll('#sidebar a').forEach(a => a.addEventListener('click', closeSidebar));
+    document.querySelectorAll('#main-content table').forEach(table => {
+      if (!table.closest('.table-responsive')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-responsive';
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      }
+    });
   </script>
   {% block scripts %}{% endblock %}
 </body>

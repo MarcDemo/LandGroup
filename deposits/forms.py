@@ -58,14 +58,33 @@ class DirectDepositForm(DepositSubmissionForm):
     proof = forms.FileField(required=False)
 
     class Meta(DepositSubmissionForm.Meta):
-        fields = ['member'] + DepositSubmissionForm.Meta.fields
+        fields = ['member', 'savings_account', 'payment_date', 'payment_time',
+                  'proof', 'remarks', 'land_savings_amount',
+                  'fine_payment_amount', 'selected_fine']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop('include_land_savings', None)
+        self.fields.pop('include_fine_payment', None)
+        self.fields['land_savings_amount'].label = 'Land Savings amount'
+        self.fields['land_savings_amount'].help_text = 'Enter only if this direct deposit includes Land Savings.'
+        self.fields['fine_payment_amount'].label = 'Fine payment amount (optional)'
 
     def clean(self):
-        data = super().clean()
+        data = forms.ModelForm.clean(self)
         member = data.get('member')
         account, fine = data.get('savings_account'), data.get('selected_fine')
+        land = data.get('land_savings_amount') or Decimal('0')
+        fine_amount = data.get('fine_payment_amount') or Decimal('0')
+        if land + fine_amount <= 0:
+            raise ValidationError('Enter a Land Savings amount or a fine payment amount.')
+        if fine_amount and not fine:
+            self.add_error('selected_fine', 'Select the fine this payment should reduce.')
+        if fine and fine_amount > fine.outstanding_balance:
+            self.add_error('fine_payment_amount', 'Amount cannot exceed the fine balance.')
         if account and member and account.member_id != member.id:
             self.add_error('savings_account', 'Select an account belonging to this member.')
         if fine and member and fine.member_id != member.id:
             self.add_error('selected_fine', 'Select a fine belonging to this member.')
+        data['calculated_total'] = land + fine_amount
         return data
