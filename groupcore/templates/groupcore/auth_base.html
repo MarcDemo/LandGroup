@@ -14,7 +14,7 @@
     body { min-height:100vh; margin:0; background:#0b2d23; font-family:Inter,"Segoe UI",system-ui,sans-serif; color:var(--ink); }
     .auth-slideshow, .auth-slideshow::after, .auth-slide { position:fixed; inset:0; }
     .auth-slideshow { overflow:hidden; z-index:0; }
-    .auth-slideshow::after { content:""; z-index:4; background:linear-gradient(115deg,rgba(5,34,25,.9),rgba(8,74,54,.62)); }
+    .auth-slideshow::after { content:""; z-index:4; background:rgba(5,20,15,.08); }
     .auth-slide { opacity:0; background-position:center; background-size:cover; animation:authImageSlide 18s infinite ease-in-out; }
     .auth-slide:nth-child(1) { background-image:url("{% static 'images/land_savings.webp' %}"); animation-delay:0s; }
     .auth-slide:nth-child(2) { background-image:url("{% static 'images/jar_savings.webp' %}"); animation-delay:6s; }
@@ -24,7 +24,7 @@
       34%, 100% { opacity:0; transform:scale(1.01) translateX(-2%); }
     }
     .auth-shell { position:relative; z-index:5; min-height:100vh; display:grid; place-items:center; padding:1.25rem; }
-    .auth-card { width:min(100%,440px); background:rgba(255,255,255,.30); border:1px solid rgba(255,255,255,.48); border-radius:1.35rem; padding:2rem; box-shadow:0 24px 70px rgba(0,20,14,.34); -webkit-backdrop-filter:blur(7px) saturate(120%); backdrop-filter:blur(7px) saturate(120%); }
+    .auth-card { width:min(100%,440px); background:rgba(255,255,255,.54); border:1px solid rgba(255,255,255,.58); border-radius:1.35rem; padding:2rem; box-shadow:0 24px 70px rgba(0,20,14,.3); -webkit-backdrop-filter:blur(18px) saturate(130%); backdrop-filter:blur(18px) saturate(130%); }
     .brand-mark { width:54px; height:54px; border-radius:16px; display:grid; place-items:center; background:#e8f7f1; color:var(--brand); font-size:1.55rem; margin:0 auto .7rem; }
     .brand-title { color:var(--brand); font-size:.74rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; margin-bottom:1.25rem; }
     .auth-card h1, .auth-card h2 { font-weight:800; letter-spacing:-.035em; }
