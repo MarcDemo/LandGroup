@@ -74,7 +74,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'Landgroup.urls'
+ROOT_URLCONF = 'landgroup.urls'
 
 TEMPLATES = [
     {
@@ -92,7 +92,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Landgroup.wsgi.application'
+WSGI_APPLICATION = 'landgroup.wsgi.application'
 
 
 # Database
