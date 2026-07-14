@@ -38,6 +38,8 @@
     .messages { margin-top:1rem; }
     .messages p { padding:.7rem; border-radius:.65rem; background:#fff0ee; color:#9f2d27; font-size:.86rem; }
     .auth-footer { color:rgba(255,255,255,.82); font-size:.75rem; text-align:center; margin-top:1rem; text-shadow:0 1px 4px rgba(0,0,0,.3); }
+    .auth-footer a { color:inherit; text-decoration:none; display:inline-flex; align-items:center; }
+    .auth-footer a:hover, .auth-footer a:focus-visible { color:#fff; text-decoration:underline; }
     .auth-footer img { height:25px; margin-right:.4rem; }
     @media (prefers-reduced-motion:reduce) { .auth-slide { animation:none; } .auth-slide:first-child { opacity:1; } }
     @media (max-width:575px) { .auth-shell{padding:.8rem}.auth-card{padding:1.45rem;border-radius:1.1rem} }
@@ -46,7 +48,7 @@
 </head>
 <body>
   <div class="auth-slideshow" aria-hidden="true"><span class="auth-slide"></span><span class="auth-slide"></span><span class="auth-slide"></span></div>
-  <main class="auth-shell"><div><section class="auth-card text-center"><div class="brand-mark"><i class="bi bi-bank2"></i></div><div class="brand-title">Land Investment Group</div><h2 class="mb-2">{% block header %}Welcome{% endblock %}</h2><p class="welcome-message mb-4">{% block subheader %}{% endblock %}</p>{% block form %}{% endblock %}<div class="messages">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div></section><div class="auth-footer"><img src="{% static 'images/deaplogof.webp' %}" alt="">Securely powered by Deap Technologies</div></div></main>
+  <main class="auth-shell"><div><section class="auth-card text-center"><div class="brand-mark"><i class="bi bi-bank2"></i></div><div class="brand-title">Land Investment Group</div><h2 class="mb-2">{% block header %}Welcome{% endblock %}</h2><p class="welcome-message mb-4">{% block subheader %}{% endblock %}</p>{% block form %}{% endblock %}<div class="messages">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div></section><div class="auth-footer"><a href="https://wa.me/message/3XKDABIYDNBEH1" target="_blank" rel="noopener" aria-label="Contact Deap Technologies on WhatsApp"><img src="{% static 'images/deaplogof.webp' %}" alt="Deap Technologies">Securely powered by Deap Technologies</a></div></div></main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   {% block extra_js %}{% endblock %}
 </body>

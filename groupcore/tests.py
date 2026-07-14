@@ -48,3 +48,5 @@ class MobileAppShellTests(TestCase):
         self.assertContains(response, 'images/land_savings.webp')
         self.assertContains(response, 'images/jar_savings.webp')
         self.assertContains(response, 'images/jar_and_coins.webp')
+        self.assertContains(response, 'https://wa.me/message/3XKDABIYDNBEH1')
+        self.assertContains(response, 'Contact Deap Technologies on WhatsApp')
