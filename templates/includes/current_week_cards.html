@@ -2,13 +2,13 @@
   <div class="mb-4"><span class="badge text-bg-success mb-2">Weekly overview</span><h1 class="h3 mb-1">Current Payment Period</h1><p class="text-muted mb-0">{{ current_week_label }}</p></div>
   <div class="row g-3 g-lg-4">
     <div class="col-lg-6">
-      <section class="card h-100 border-success-subtle">
+      <section class="card h-100 weekly-paid-card">
         <header class="card-header d-flex align-items-center justify-content-between"><span><span class="rounded-circle bg-success-subtle text-success d-inline-grid place-items-center me-2" style="width:36px;height:36px"><i class="bi bi-check-lg"></i></span>Paid this week</span><span class="badge text-bg-success">{{ paid_members|length }}</span></header>
         <div class="list-group list-group-flush">{% for row in paid_members %}<div class="list-group-item py-3"><strong>{{ row.member.get_full_name|default:row.member.username }}</strong></div>{% empty %}<div class="text-center text-muted py-5"><i class="bi bi-hourglass fs-2 d-block mb-2"></i>No members have completed this week yet.</div>{% endfor %}</div>
       </section>
     </div>
     <div class="col-lg-6">
-      <section class="card h-100 border-danger-subtle">
+      <section class="card h-100 weekly-unpaid-card">
         <header class="card-header d-flex align-items-center justify-content-between"><span><span class="rounded-circle bg-danger-subtle text-danger d-inline-grid place-items-center me-2" style="width:36px;height:36px"><i class="bi bi-exclamation-lg"></i></span>Not paid this week</span><span class="badge text-bg-danger">{{ unpaid_members|length }}</span></header>
         <div class="list-group list-group-flush">{% for row in unpaid_members %}<div class="list-group-item py-3"><strong>{{ row.member.get_full_name|default:row.member.username }}</strong></div>{% empty %}<div class="text-center text-muted py-5"><i class="bi bi-stars fs-2 d-block mb-2"></i>Everyone is paid for this week.</div>{% endfor %}</div>
       </section>

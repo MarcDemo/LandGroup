@@ -210,6 +210,8 @@ class DepositViewTests(DepositAccountingTests):
         unpaid_ids = [row['member'].id for row in response.context['unpaid_members']]
         self.assertIn(self.member.id, paid_ids)
         self.assertIn(unpaid.id, unpaid_ids)
+        self.assertContains(response, 'weekly-paid-card')
+        self.assertContains(response, 'weekly-unpaid-card')
 
     def test_only_treasurer_can_approve_and_endpoint_requires_post(self):
         deposit = self.deposit(land=20000)
