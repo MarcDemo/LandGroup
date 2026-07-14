@@ -479,6 +479,28 @@
               <i class="bi bi-cash-stack me-2"></i> View Expenditures
             </a>
           </li>
+
+          <li class="nav-item mt-3"><div class="sidebar-heading px-3">My Member Account</div></li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'member_dashboard' %}active{% endif %}" href="{% url 'member_dashboard' %}">
+              <i class="bi bi-person-square me-2"></i> My Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'submit_deposit' %}active{% endif %}" href="{% url 'submit_deposit' %}">
+              <i class="bi bi-wallet2 me-2"></i> Make a Deposit
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'my_contributions' %}active{% endif %}" href="{% url 'my_contributions' %}">
+              <i class="bi bi-graph-up-arrow me-2"></i> My Contributions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'my_fines' %}active{% endif %}" href="{% url 'my_fines' %}">
+              <i class="bi bi-receipt me-2"></i> My Fines
+            </a>
+          </li>
         {% endif %}
 
         {% if request.user.is_chairman %}

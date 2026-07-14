@@ -50,8 +50,6 @@ def _filtered_deposits(request, queryset):
 
 @login_required
 def submit_deposit(request):
-    if request.user.is_treasurer():
-        return redirect('manage_deposits')
     settings_obj = GroupSettings.objects.first()
     if not settings_obj:
         messages.error(request, 'Treasurer must configure Group Settings first.')
