@@ -142,6 +142,18 @@ class DepositAccountingTests(TestCase):
 
 
 class DepositViewTests(DepositAccountingTests):
+    def test_manage_deposits_renders_thumbnail_and_expanded_proof_modal(self):
+        deposit = self.deposit(land=20000)
+        deposit.proof = 'proofs/payment-proof.jpg'
+        deposit.save(update_fields=['proof'])
+        self.client.force_login(self.treasurer)
+
+        response = self.client.get(reverse('manage_deposits'))
+
+        self.assertContains(response, 'class="proof-thumbnail"')
+        self.assertContains(response, f'id="proofModal{deposit.id}"')
+        self.assertContains(response, 'class="proof-preview-image"')
+
     def test_current_week_status_separates_paid_and_unpaid_members(self):
         unpaid = MemberProfile.objects.create_user(username='unpaid', password='pw')
         approve_deposit(self.deposit(land=80000).id, self.treasurer)

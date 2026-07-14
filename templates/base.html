@@ -287,6 +287,14 @@
   .table thead th { color: #667085; background: #f8faf9; font-size: .7rem; letter-spacing: .07em; border-bottom-width: 1px; }
   .table tbody tr { transition: background .15s ease; }
   .table tbody tr:hover { background: #f5fbf8; }
+  .proof-thumb-button { display:inline-grid; place-items:center; width:58px; height:58px; padding:3px; overflow:hidden; border:1px solid #cad5dc; border-radius:.75rem; background:#fff; color:var(--lg-brand); cursor:zoom-in; transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease; }
+  .proof-thumb-button:hover, .proof-thumb-button:focus-visible { transform:translateY(-2px); border-color:var(--lg-brand); box-shadow:0 8px 18px rgba(15,138,95,.16); }
+  .proof-thumbnail { display:block; width:50px; height:50px; object-fit:cover; border-radius:.55rem; }
+  .proof-file-icon { font-size:1.55rem; }
+  .proof-preview-image { display:block; max-width:100%; max-height:78vh; margin:auto; object-fit:contain; border-radius:.8rem; }
+  .proof-preview-frame { display:block; width:100%; height:min(78vh,850px); border:0; border-radius:.8rem; background:#fff; }
+  .proof-preview-modal .modal-content { background:rgba(248,250,249,.98); border:1px solid rgba(255,255,255,.8); border-radius:1rem; overflow:hidden; }
+  .proof-preview-modal .modal-body { min-height:240px; background:#e9efec; }
   .badge { border-radius: 2rem; padding: .42rem .65rem; font-weight: 650; }
   .alert { border: 0; border-radius: .9rem; box-shadow: 0 8px 22px rgba(15,23,42,.05); }
   .alert-success { background: #e9f8f2; color: #076444; }
