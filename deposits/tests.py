@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -11,7 +11,36 @@ from groupcore.models import GroupSettings, MemberProfile
 from .forms import DepositSubmissionForm
 from .models import DepositSubmission, FinePaymentAllocation, SavingsAccount, WeeklySavingsAllocation
 from .services import approve_deposit, reject_deposit
-from .utils import savings_position
+from .utils import group_week_info, savings_position, week_label
+
+
+class GroupFinancialWeekTests(TestCase):
+    def setUp(self):
+        self.start = date(2025, 7, 7)
+        self.settings = GroupSettings.objects.create(
+            week_one_start=self.start, weekly_contribution=20000
+        )
+
+    def test_original_start_is_financial_and_overall_week_one(self):
+        info = group_week_info(self.start, self.start)
+        self.assertEqual((info['financial_week'], info['financial_year'], info['overall_week']), (1, 2025, 1))
+
+    def test_2026_financial_year_resets_on_first_monday_in_july(self):
+        info = group_week_info(date(2026, 7, 6), self.start)
+        self.assertEqual((info['financial_week'], info['financial_year'], info['overall_week']), (1, 2026, 53))
+
+    def test_14_july_2026_is_financial_week_two_and_overall_54(self):
+        value = date(2026, 7, 14)
+        info = group_week_info(value, self.start)
+        self.assertEqual((info['financial_week'], info['financial_year'], info['overall_week']), (2, 2026, 54))
+        self.assertEqual(
+            week_label(value, self.settings),
+            'Week 2, Financial Year 2026 (Overall Week 54)',
+        )
+
+    def test_financial_year_can_contain_week_53(self):
+        info = group_week_info(date(2031, 6, 30), self.start)
+        self.assertEqual((info['financial_week'], info['financial_year']), (53, 2030))
 
 
 class DepositAccountingTests(TestCase):
