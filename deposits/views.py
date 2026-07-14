@@ -20,6 +20,7 @@ from fines.models import Fine
 from groupcore.models import GroupSettings, MemberProfile
 from .forms import DepositSubmissionForm, DirectDepositForm
 from .models import DepositAuditLog, DepositSubmission, SavingsAccount
+from .notifications import notify_deposit_reviewed, notify_deposit_submitted
 from .services import approve_deposit as approve_deposit_service, get_or_create_account, reject_deposit as reject_deposit_service
 from .utils import savings_position, week_label
 
@@ -67,6 +68,7 @@ def submit_deposit(request):
         deposit.amount = form.cleaned_data['calculated_total']
         deposit.save()
         DepositAuditLog.objects.create(deposit=deposit, actor=request.user, action='SUBMITTED')
+        notify_deposit_submitted(deposit)
         messages.success(request, f'Deposit submitted for review. Total: UGX {deposit.amount:,.0f}.')
         return redirect('my_contributions')
     return render(request, 'deposits/submit_deposit.html', {'form': form})
@@ -82,7 +84,8 @@ def approve_deposit(request, deposit_id):
         deposit = DepositSubmission.objects.get(pk=deposit_id)
         deposit.review_comment = request.POST.get('comment', '').strip()
         deposit.save(update_fields=['review_comment'])
-        approve_deposit_service(deposit_id, request.user)
+        deposit = approve_deposit_service(deposit_id, request.user)
+        notify_deposit_reviewed(deposit)
         messages.success(request, 'Deposit approved and all allocations posted atomically.')
     except (DepositSubmission.DoesNotExist, ValidationError) as exc:
         messages.error(request, str(exc))
@@ -96,7 +99,8 @@ def reject_deposit(request, deposit_id):
         messages.error(request, 'Only the Treasurer can reject deposits.')
         return redirect('member_dashboard')
     try:
-        reject_deposit_service(deposit_id, request.user, request.POST.get('comment', '').strip())
+        deposit = reject_deposit_service(deposit_id, request.user, request.POST.get('comment', '').strip())
+        notify_deposit_reviewed(deposit)
         messages.warning(request, 'Deposit rejected. No savings or fine balances were changed.')
     except (DepositSubmission.DoesNotExist, ValidationError) as exc:
         messages.error(request, str(exc))
@@ -156,7 +160,8 @@ def manage_deposits(request):
             deposit.save()
             DepositAuditLog.objects.create(deposit=deposit, actor=request.user, action='SUBMITTED_DIRECT')
             try:
-                approve_deposit_service(deposit.pk, request.user)
+                deposit = approve_deposit_service(deposit.pk, request.user)
+                notify_deposit_reviewed(deposit)
                 messages.success(request, 'Direct deposit recorded and approved.')
             except ValidationError as exc: messages.error(request, str(exc))
             return redirect('manage_deposits')

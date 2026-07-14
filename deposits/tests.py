@@ -2,7 +2,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,6 +11,7 @@ from fines.models import Fine
 from groupcore.models import GroupSettings, MemberProfile
 from .forms import DepositSubmissionForm, DirectDepositForm
 from .models import DepositSubmission, FinePaymentAllocation, SavingsAccount, WeeklySavingsAllocation
+from .notifications import notify_deposit_submitted
 from .services import approve_deposit, reject_deposit
 from .utils import group_week_info, savings_position, week_label
 
@@ -169,6 +171,43 @@ class DepositAccountingTests(TestCase):
 
 
 class DepositViewTests(DepositAccountingTests):
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='LandGroup <landgroup@example.com>',
+    )
+    def test_submission_emails_member_and_treasurer(self):
+        self.member.email = 'member@example.com'
+        self.member.save(update_fields=['email'])
+        self.treasurer.email = 'treasurer@example.com'
+        self.treasurer.save(update_fields=['email'])
+        deposit = self.deposit(land=20000)
+
+        notify_deposit_submitted(deposit)
+
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(
+            {recipient for message in mail.outbox for recipient in message.to},
+            {'member@example.com', 'treasurer@example.com'},
+        )
+        self.assertTrue(all(deposit.transaction_reference in message.subject for message in mail.outbox))
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='LandGroup <landgroup@example.com>',
+    )
+    def test_approval_emails_member_after_successful_review(self):
+        self.member.email = 'member@example.com'
+        self.member.save(update_fields=['email'])
+        deposit = self.deposit(land=20000)
+        self.client.force_login(self.treasurer)
+
+        response = self.client.post(reverse('approve_deposit', args=[deposit.pk]))
+
+        self.assertRedirects(response, reverse('manage_deposits'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Deposit approved', mail.outbox[0].subject)
+        self.assertEqual(mail.outbox[0].to, ['member@example.com'])
+
     def test_treasurer_can_post_direct_deposit_for_member_without_fine(self):
         self.client.force_login(self.treasurer)
 
