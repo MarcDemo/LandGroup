@@ -45,16 +45,22 @@ class DepositSubmissionForm(forms.ModelForm):
     def clean(self):
         data = super().clean()
         land = data.get('land_savings_amount') or Decimal('0')
-        fine = data.get('fine_payment_amount') or Decimal('0')
         if data.get('include_land_savings') != bool(land):
             self.add_error('land_savings_amount', 'Enter an amount when Land Savings is selected.')
-        if data.get('include_fine_payment') != bool(fine):
-            self.add_error('fine_payment_amount', 'Enter an amount when Fine Payment is selected.')
-        selected = data.get('selected_fine')
-        if fine and not selected:
-            self.add_error('selected_fine', 'Select the fine this payment should reduce.')
-        if selected and fine > selected.outstanding_balance:
-            self.add_error('fine_payment_amount', 'Amount cannot exceed the fine balance.')
+
+        # Members without an outstanding fine do not have these fields. Keep
+        # validation in step with the fields built in __init__; add_error()
+        # raises ValueError when asked to target a field that was removed.
+        fine = Decimal('0')
+        if 'fine_payment_amount' in self.fields:
+            fine = data.get('fine_payment_amount') or Decimal('0')
+            if data.get('include_fine_payment') != bool(fine):
+                self.add_error('fine_payment_amount', 'Enter an amount when Fine Payment is selected.')
+            selected = data.get('selected_fine')
+            if fine and not selected:
+                self.add_error('selected_fine', 'Select the fine this payment should reduce.')
+            if selected and fine > selected.outstanding_balance:
+                self.add_error('fine_payment_amount', 'Amount cannot exceed the fine balance.')
         if land + fine <= 0:
             raise ValidationError('Select at least one category and enter an amount.')
         data['calculated_total'] = land + fine

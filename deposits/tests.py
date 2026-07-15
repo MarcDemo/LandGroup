@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -88,6 +89,25 @@ class DepositAccountingTests(TestCase):
         self.client.force_login(self.member)
         response = self.client.get(reverse('submit_deposit'))
         self.assertNotContains(response, 'Fine Payment')
+
+    def test_member_without_outstanding_fine_can_submit_land_savings(self):
+        self.client.force_login(self.member)
+
+        response = self.client.post(reverse('submit_deposit'), {
+            'savings_account': self.account.pk,
+            'include_land_savings': 'on',
+            'land_savings_amount': '20000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '10:41',
+            'proof': SimpleUploadedFile('proof.jpg', b'payment proof', content_type='image/jpeg'),
+            'remarks': '',
+        })
+
+        self.assertRedirects(response, reverse('my_contributions'))
+        deposit = DepositSubmission.objects.latest('id')
+        self.assertEqual(deposit.member, self.member)
+        self.assertEqual(deposit.land_savings_amount, Decimal('20000'))
+        self.assertEqual(deposit.fine_payment_amount, Decimal('0'))
 
     def test_member_with_outstanding_fine_has_fine_payment_option(self):
         Fine.objects.create(
