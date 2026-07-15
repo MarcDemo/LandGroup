@@ -101,24 +101,6 @@
               <button type="button" class="proof-thumb-button" data-bs-toggle="modal" data-bs-target="#proofModal{{ deposit.id }}" aria-label="Preview proof of payment">
                 <img src="{{ deposit.proof.url }}" alt="Proof of payment thumbnail" class="proof-thumbnail" loading="lazy">
               </button>
-
-              <!-- Modal -->
-              <div class="modal fade proof-preview-modal" id="proofModal{{ deposit.id }}" tabindex="-1" aria-labelledby="proofModalLabel{{ deposit.id }}" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h2 class="modal-title fs-5" id="proofModalLabel{{ deposit.id }}">Proof of payment</h2>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close proof preview"></button>
-                    </div>
-                    <div class="modal-body p-3">
-                      <img src="{{ deposit.proof.url }}" class="proof-preview-image" alt="Expanded proof of payment">
-                    </div>
-                    <div class="modal-footer">
-                      <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
               {% else %}
               <span class="text-muted">No proof</span>
               {% endif %}
@@ -133,6 +115,28 @@
       </table></div>
     </div>
   </div>
+
+  <!-- Keep fixed-position modals outside the scrolling table for mobile Safari. -->
+  {% for deposit in recent_deposits %}
+    {% if deposit.proof %}
+    <div class="modal fade proof-preview-modal" id="proofModal{{ deposit.id }}" tabindex="-1" aria-labelledby="proofModalLabel{{ deposit.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title fs-5" id="proofModalLabel{{ deposit.id }}">Proof of payment</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close proof preview"></button>
+          </div>
+          <div class="modal-body p-3">
+            <img src="{{ deposit.proof.url }}" class="proof-preview-image" alt="Expanded proof of payment">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
 
   <!-- Unpaid Fines -->
   <div class="card shadow-sm">

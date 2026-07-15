@@ -52,6 +52,9 @@ class MobileAppShellTests(TestCase):
         self.assertContains(response, 'class="btn-close" data-bs-dismiss="modal"')
         self.assertContains(response, 'data-bs-dismiss="modal">Close</button>')
         self.assertContains(response, 'modal-dialog-scrollable')
+        table_end = response.content.index(b'</table>')
+        modal_start = response.content.index(f'id="proofModal{deposit.id}"'.encode())
+        self.assertGreater(modal_start, table_end)
 
     def test_treasurer_gets_role_specific_mobile_actions(self):
         treasurer = MemberProfile.objects.create_user(
