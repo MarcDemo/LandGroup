@@ -1,2 +1,28 @@
 {% extends 'base.html' %}
-{% block content %}<div class="container-fluid py-3"><div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4"><div><span class="badge text-bg-danger mb-2">Treasury</span><h1 class="h3 mb-1">Fine management</h1><p class="text-muted mb-0">Track original amounts, payments, balances, and statuses.</p></div><a class="btn btn-danger" href="{% url 'add_fine' %}"><i class="bi bi-plus-lg me-1"></i>Issue fine</a></div><div class="card"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Member</th><th>Reason</th><th>Original</th><th>Paid</th><th>Balance</th><th>Status</th><th>Issued by</th><th>Date</th><th>Action</th></tr></thead><tbody>{% for fine in fines %}<tr><td><strong>{{ fine.member.get_full_name|default:fine.member.username }}</strong></td><td>{{ fine.reason }}</td><td>UGX {{ fine.amount|floatformat:0 }}</td><td>UGX {{ fine.amount_paid|floatformat:0 }}</td><td><strong>UGX {{ fine.outstanding_balance|floatformat:0 }}</strong></td><td><span class="badge {% if fine.status == 'PAID' %}text-bg-success{% elif fine.status == 'PARTIAL' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ fine.get_status_display }}</span></td><td>{{ fine.issued_by.get_full_name|default:fine.issued_by.username }}</td><td>{{ fine.date_issued|date:'M d, Y' }}</td><td>{% if not fine.is_paid %}<form method="post" action="{% url 'mark_fine_paid' fine.id %}" onsubmit="return confirm('Mark the full outstanding balance as paid?')">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Mark paid</button></form>{% else %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}</td></tr>{% empty %}<tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-receipt fs-2 d-block mb-2"></i>No fines recorded.</td></tr>{% endfor %}</tbody></table></div></div>{% include 'includes/pagination.html' with page_obj=fines %}</div>{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div><span class="badge text-bg-danger mb-2">Treasury</span><h1 class="h3 mb-1">Fine management</h1><p class="text-muted mb-0">Review automatic candidates and track active fine balances.</p></div>
+    <a class="btn btn-danger" href="{% url 'add_fine' %}"><i class="bi bi-plus-lg me-1"></i>Issue fine</a>
+  </div>
+  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Member</th><th>Reason / Week</th><th>Original</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Approval</th><th>Issued / Decided by</th><th>Date</th><th>Action</th></tr></thead>
+    <tbody>{% for fine in fines %}<tr>
+      <td><strong>{{ fine.member.get_full_name|default:fine.member.username }}</strong></td>
+      <td>{{ fine.reason }}{% if fine.affected_week %}<div class="small text-muted">Week starting {{ fine.affected_week|date:'M d, Y' }}</div>{% endif %}</td>
+      <td>UGX {{ fine.amount|floatformat:0 }}</td><td>UGX {{ fine.amount_paid|floatformat:0 }}</td><td><strong>UGX {{ fine.outstanding_balance|floatformat:0 }}</strong></td>
+      <td><span class="badge {% if fine.status == 'PAID' %}text-bg-success{% elif fine.status == 'PARTIAL' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ fine.get_status_display }}</span></td>
+      <td><span class="badge {% if fine.approval_status == 'ACTIVE' %}text-bg-success{% elif fine.approval_status == 'DISMISSED' %}text-bg-secondary{% else %}text-bg-warning{% endif %}">{{ fine.get_approval_status_display }}</span><div class="small text-muted">{{ fine.get_origin_display }}</div></td>
+      <td>{% if fine.decided_by %}{{ fine.decided_by.get_full_name|default:fine.decided_by.username }}{% elif fine.issued_by %}{{ fine.issued_by.get_full_name|default:fine.issued_by.username }}{% else %}System{% endif %}{% if fine.decision_comment %}<div class="small text-muted">{{ fine.decision_comment }}</div>{% endif %}</td>
+      <td>{{ fine.date_issued|date:'M d, Y' }}{% if fine.decision_at %}<div class="small text-muted">Decided {{ fine.decision_at|date:'M d, Y H:i' }}</div>{% endif %}</td>
+      <td>{% if fine.approval_status == 'PENDING' %}
+        <form method="post" action="{% url 'activate_fine' fine.id %}" class="mb-1">{% csrf_token %}<input class="form-control form-control-sm mb-1" name="comment" placeholder="Approval comment"><button class="btn btn-sm btn-success w-100">Activate</button></form>
+        <form method="post" action="{% url 'dismiss_fine' fine.id %}" onsubmit="return confirm('Dismiss this fine candidate?')">{% csrf_token %}<input class="form-control form-control-sm mb-1" name="comment" placeholder="Dismissal reason"><button class="btn btn-sm btn-outline-danger w-100">Dismiss</button></form>
+      {% elif fine.approval_status == 'ACTIVE' and not fine.is_paid %}
+        <form method="post" action="{% url 'mark_fine_paid' fine.id %}" onsubmit="return confirm('Mark the full outstanding balance as paid?')">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Mark paid</button></form>
+      {% else %}<span class="text-muted small">No action</span>{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-receipt fs-2 d-block mb-2"></i>No fines recorded.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+  {% include 'includes/pagination.html' with page_obj=fines %}
+</div>
+{% endblock %}

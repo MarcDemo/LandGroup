@@ -260,6 +260,19 @@ class DepositViewTests(DepositAccountingTests):
         self.assertContains(response, f'id="proofModal{deposit.id}"')
         self.assertContains(response, 'class="proof-preview-image"')
 
+    def test_manage_deposits_displays_member_remarks_and_blank_fallback(self):
+        commented = self.deposit(land=20000, reference='COMMENTED')
+        commented.remarks = 'Paid from mobile money\nPlease confirm.'
+        commented.save(update_fields=['remarks'])
+        self.deposit(land=20000, reference='BLANK').remarks
+        self.client.force_login(self.treasurer)
+
+        response = self.client.get(reverse('manage_deposits'))
+
+        self.assertContains(response, 'Remarks / Comment')
+        self.assertContains(response, 'Paid from mobile money')
+        self.assertContains(response, 'Please confirm.')
+
     def test_current_week_status_separates_paid_and_unpaid_members(self):
         unpaid = MemberProfile.objects.create_user(username='unpaid', password='pw')
         approve_deposit(self.deposit(land=80000).id, self.treasurer)

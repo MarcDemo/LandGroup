@@ -56,3 +56,13 @@ cp db.sqlite3 "$HOME/landgroup-db-$(date +%Y%m%d-%H%M%S).sqlite3"
 ```
 
 After deployment, sign in as Treasurer, verify Group Settings (week-one date and weekly contribution), open Manage Deposits, and test a small pending submission through approval.
+
+## Automatic fine schedule
+
+Configure a daily cPanel cron job after deploying the automatic-fine feature. Use the same virtual environment and application path as the web application:
+
+```bash
+cd /home/farmsnva/landgroupug.org && /home/farmsnva/virtualenv/landgroupug.org/3.11/bin/python manage.py reconcile_automatic_fines
+```
+
+Running it daily shortly after the configured weekly cutoff is sufficient. The command is idempotent, and Fine Management also reconciles when the Treasurer opens the page. On its first run, automation starts with the weekly period containing that run and does not create older historical candidates.

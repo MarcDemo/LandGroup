@@ -170,7 +170,7 @@ def chairman_fine_report(request):
         messages.error(request, "Access denied.")
         return redirect('chairman_dashboard')
 
-    fines = Fine.objects.all().order_by('-date_issued')
+    fines = Fine.objects.active().order_by('-date_issued')
     return render(request, 'chairman/fine_report.html', {'fines': Paginator(fines, 20).get_page(request.GET.get('page'))})
 
 

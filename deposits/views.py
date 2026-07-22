@@ -185,7 +185,7 @@ def treasurer_reports(request):
         position = savings_position(member, account)
         report_data.append({'member': member, 'account': account, 'position': position,
             'total_land': member.deposits.filter(status='APPROVED').aggregate(total=Sum('land_savings_amount'))['total'] or 0,
-            'outstanding_fines': sum((f.outstanding_balance for f in member.fines.all()), Decimal('0'))})
+            'outstanding_fines': sum((f.outstanding_balance for f in member.fines.active()), Decimal('0'))})
     return render(request, 'deposits/treasurer_reports.html', {'report_data': _page(request, report_data), 'current_week': week_label(period_date, settings_obj)})
 
 

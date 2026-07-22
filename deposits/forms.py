@@ -30,7 +30,7 @@ class DepositSubmissionForm(forms.ModelForm):
         self.member = member
         if member:
             self.fields['savings_account'].queryset = SavingsAccount.objects.filter(member=member, is_active=True)
-            outstanding_fines = Fine.objects.filter(
+            outstanding_fines = Fine.objects.active().filter(
                 member=member, amount__gt=F('amount_paid')
             ).exclude(status='PAID')
             self.fields['selected_fine'].queryset = outstanding_fines
@@ -40,7 +40,7 @@ class DepositSubmissionForm(forms.ModelForm):
                 self.fields.pop('selected_fine', None)
         elif 'member' in self.fields:
             self.fields['savings_account'].queryset = SavingsAccount.objects.filter(is_active=True).select_related('member')
-            self.fields['selected_fine'].queryset = Fine.objects.exclude(status='PAID').select_related('member')
+            self.fields['selected_fine'].queryset = Fine.objects.active().exclude(status='PAID').select_related('member')
 
     def clean(self):
         data = super().clean()

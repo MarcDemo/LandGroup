@@ -194,7 +194,7 @@ def treasurer_dashboard(request):
     pending_deposits_count = DepositSubmission.objects.filter(status='PENDING').count()
 
     # Sum of unpaid fines
-    total_unpaid_fines = Fine.objects.filter(is_paid=False).aggregate(total=Sum('amount'))['total'] or 0
+    total_unpaid_fines = Fine.objects.active().filter(is_paid=False).aggregate(total=Sum('amount'))['total'] or 0
 
     # Recent deposit submissions
     recent_deposits = DepositSubmission.objects.select_related('member').order_by('-date_submitted')[:10]
@@ -237,7 +237,7 @@ def member_dashboard(request):
         weeks_paid = sum(1 for row in WeeklySavingsAllocation.objects.filter(savings_account=account).values('week_start').annotate(total=Sum('amount')) if row['total'] >= settings_obj.weekly_contribution)
 
     
-    unpaid_fines = Fine.objects.filter(member=member).exclude(status='PAID')
+    unpaid_fines = Fine.objects.active().filter(member=member).exclude(status='PAID')
     outstanding_fines = sum((fine.outstanding_balance for fine in unpaid_fines), 0)
 
     
@@ -348,7 +348,7 @@ def chairman_dashboard(request):
         total=Sum('amount'))['total'] or 0
 
     # Sum of fines amounts
-    total_fines = Fine.objects.filter(is_paid='True').aggregate(total=Sum('amount'))['total'] or 0
+    total_fines = Fine.objects.active().filter(is_paid=True).aggregate(total=Sum('amount'))['total'] or 0
 
     total_documents = Document.objects.count()
 
@@ -393,7 +393,7 @@ def chairman_dashboard(request):
     recent_deposits = DepositSubmission.objects.select_related('member').order_by('-date_submitted')[:5]
 
     # Recent fines - latest 5 fines
-    recent_fines = Fine.objects.select_related('member').order_by('-date_issued')[:5]
+    recent_fines = Fine.objects.active().select_related('member').order_by('-date_issued')[:5]
 
     context = {
         "summary_cards": summary_cards,
