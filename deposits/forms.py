@@ -75,6 +75,7 @@ class DepositSubmissionForm(forms.ModelForm):
                     'amount_field': self[field_name],
                     'checked': str(fine.pk) in checked_ids,
                 })
+        self.requires_fine_allocation = len(self.fine_rows) > 1
 
     def _clean_fine_allocations(self, data, member):
         fine_amount = data.get('fine_payment_amount') or Decimal('0')
@@ -82,6 +83,19 @@ class DepositSubmissionForm(forms.ModelForm):
         raw_ids = self._posted_list('selected_fines') if self.is_bound else []
         if len(raw_ids) != len(set(raw_ids)):
             self.add_error('selected_fines', 'A fine cannot be selected more than once.')
+
+        if fine_amount and len(self.fine_rows) == 1:
+            fine = self.fine_rows[0]['fine']
+            if member and fine.member_id != member.id:
+                self.add_error('selected_fines', 'The outstanding fine must belong to this member.')
+            if fine_amount > fine.outstanding_balance:
+                self.add_error(
+                    'fine_payment_amount',
+                    f'Amount cannot exceed the outstanding balance of UGX {fine.outstanding_balance:,.0f}.',
+                )
+            data['fine_allocations'] = [(fine, fine_amount)]
+            return fine_amount
+
         if fine_amount and not selected:
             self.add_error('selected_fines', 'Select at least one fine for this payment.')
 

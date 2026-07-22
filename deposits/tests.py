@@ -115,15 +115,39 @@ class DepositAccountingTests(TestCase):
         self.assertEqual(deposit.fine_payment_amount, Decimal('0'))
 
     def test_member_with_outstanding_fine_has_fine_payment_option(self):
-        Fine.objects.create(
+        fine = Fine.objects.create(
             member=self.member, reason='Late', amount=30000, issued_by=self.treasurer
         )
         form = DepositSubmissionForm(member=self.member)
         self.assertIn('include_fine_payment', form.fields)
+        self.assertFalse(form.requires_fine_allocation)
 
         self.client.force_login(self.member)
         response = self.client.get(reverse('submit_deposit'))
         self.assertContains(response, 'Fine Payment')
+        self.assertContains(response, 'automatically be applied to your outstanding fine')
+        self.assertNotContains(response, f'name="selected_fines" value="{fine.pk}"')
+
+    def test_single_fine_is_allocated_automatically(self):
+        fine = Fine.objects.create(
+            member=self.member, reason='Late', amount=10000, issued_by=self.treasurer,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.post(reverse('submit_deposit'), {
+            'savings_account': self.account.pk,
+            'include_fine_payment': 'on',
+            'fine_payment_amount': '6000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '10:41',
+            'proof': SimpleUploadedFile('proof.jpg', b'payment proof', content_type='image/jpeg'),
+            'remarks': '',
+        })
+
+        self.assertRedirects(response, reverse('my_contributions'))
+        deposit = DepositSubmission.objects.latest('id')
+        allocation = deposit.fine_allocations.get()
+        self.assertEqual((allocation.fine, allocation.amount), (fine, Decimal('6000')))
 
     def test_treasurer_direct_form_has_no_category_toggle_boxes(self):
         form = DirectDepositForm()
@@ -352,6 +376,26 @@ class DepositViewTests(DepositAccountingTests):
         deposit = DepositSubmission.objects.latest('id')
         self.assertEqual(deposit.status, 'APPROVED')
         self.assertEqual(deposit.fine_allocations.count(), 2)
+
+    def test_treasurer_direct_deposit_auto_allocates_one_fine(self):
+        fine = Fine.objects.create(member=self.member, reason='Late', amount=5000, issued_by=self.treasurer)
+        self.client.force_login(self.treasurer)
+
+        response = self.client.post(reverse('manage_deposits'), {
+            'direct_deposit': '1',
+            'member': self.member.pk,
+            'savings_account': self.account.pk,
+            'land_savings_amount': '',
+            'fine_payment_amount': '5000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '12:30',
+            'remarks': '',
+        })
+
+        self.assertRedirects(response, reverse('manage_deposits'))
+        deposit = DepositSubmission.objects.latest('id')
+        self.assertEqual(deposit.status, 'APPROVED')
+        self.assertEqual(deposit.fine_allocations.get().fine, fine)
 
     def test_manage_deposits_renders_thumbnail_and_expanded_proof_modal(self):
         deposit = self.deposit(land=20000)

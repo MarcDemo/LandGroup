@@ -20,7 +20,7 @@
             <div class="form-check form-switch">{{ form.include_fine_payment|add_class:'form-check-input' }}<label class="form-check-label fw-semibold" for="id_include_fine_payment">Fine Payment</label></div>
             <div id="fine-fields" class="mt-3 d-none">
               <label class="form-label">Fine amount (UGX)</label>{{ form.fine_payment_amount|add_class:'form-control amount-input' }}{{ form.fine_payment_amount.errors }}
-              <div class="form-label mt-3">Allocate to</div>
+              {% if form.requires_fine_allocation %}<div class="form-label mt-3">Allocate to</div>
               {{ form.selected_fines.errors }}
               <div class="vstack gap-2">
                 {% for row in form.fine_rows %}<div class="fine-allocation-row border rounded p-2">
@@ -30,7 +30,7 @@
                   </div>
                   <div class="mt-2 fine-allocation-amount"><label class="form-label small mb-1">Amount for this fine (UGX)</label>{{ row.amount_field|add_class:'form-control' }}{{ row.amount_field.errors }}</div>
                 </div>{% endfor %}
-              </div>
+              </div>{% else %}{% with row=form.fine_rows.0 %}<div class="form-text mt-2">This payment will automatically be applied to your outstanding fine: {{ row.fine.reason }} (balance UGX {{ row.fine.outstanding_balance|floatformat:0 }}).</div>{% endwith %}{% endif %}
             </div>
           </div>
         </div>{% endif %}

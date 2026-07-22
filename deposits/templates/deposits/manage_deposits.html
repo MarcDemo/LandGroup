@@ -11,7 +11,7 @@
   <div class="collapse mb-4 {% if form.errors %}show{% endif %}" id="direct-form"><div class="card card-body shadow-sm"><h2 class="h5">Record Direct Deposit</h2><form method="post" enctype="multipart/form-data" class="row g-3">{% csrf_token %}<input type="hidden" name="direct_deposit" value="1">
     {% if form.non_field_errors %}<div class="col-12 alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     {% for field in form.direct_fields %}<div class="col-md-6"><label class="form-label">{{ field.label }}</label>{{ field|add_class:'form-control' }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}
-    <div class="col-12"><label class="form-label">Allocate fine payment</label>{{ form.selected_fines.errors }}<div class="row g-2" id="direct-fine-rows">
+    <div class="col-12" id="direct-fine-allocation-panel"><label class="form-label">Allocate fine payment</label><div class="form-text mb-2 d-none" id="direct-single-fine-message">The fine payment will automatically be applied to this member's only outstanding fine.</div>{{ form.selected_fines.errors }}<div class="row g-2" id="direct-fine-rows">
       {% for row in form.fine_rows %}<div class="col-md-6 direct-fine-row" data-member="{{ row.fine.member_id }}"><div class="border rounded p-2 h-100">
         <div class="form-check"><input class="form-check-input direct-fine-selector" type="checkbox" name="selected_fines" value="{{ row.fine.pk }}" id="direct-fine-{{ row.fine.pk }}" {% if row.checked %}checked{% endif %}><label class="form-check-label" for="direct-fine-{{ row.fine.pk }}"><strong>{{ row.fine.reason }}</strong><span class="d-block small text-muted">{{ row.fine.member.get_full_name|default:row.fine.member.username }} · Outstanding UGX {{ row.fine.outstanding_balance|floatformat:0 }}</span></label></div>
         <div class="direct-fine-amount mt-2"><label class="form-label small mb-1">Amount for this fine (UGX)</label>{{ row.amount_field|add_class:'form-control' }}{% for error in row.amount_field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
@@ -31,7 +31,7 @@
 {% endblock %}
 {% block scripts %}<script>
 document.addEventListener('DOMContentLoaded',()=>{
- const member=document.getElementById('id_member');
- const sync=()=>document.querySelectorAll('.direct-fine-row').forEach(row=>{const visible=!member.value||row.dataset.member===member.value;row.classList.toggle('d-none',!visible);const check=row.querySelector('.direct-fine-selector'),amount=row.querySelector('.direct-fine-amount'),input=amount.querySelector('input');if(!visible)check.checked=false;amount.classList.toggle('d-none',!check.checked);input.disabled=!visible||!check.checked;if(!check.checked)input.value='';});
+ const member=document.getElementById('id_member'),message=document.getElementById('direct-single-fine-message');
+ const sync=()=>{const rows=[...document.querySelectorAll('.direct-fine-row')],visibleRows=rows.filter(row=>member.value&&row.dataset.member===member.value),single=visibleRows.length===1;message.classList.toggle('d-none',!single);rows.forEach(row=>{const visible=visibleRows.includes(row),check=row.querySelector('.direct-fine-selector'),amount=row.querySelector('.direct-fine-amount'),input=amount.querySelector('input');row.classList.toggle('d-none',!visible||single);if(!visible||single)check.checked=false;amount.classList.toggle('d-none',!check.checked);input.disabled=!visible||single||!check.checked;if(!check.checked)input.value='';});};
  document.querySelectorAll('.direct-fine-selector').forEach(check=>check.addEventListener('change',sync));member.addEventListener('change',sync);sync();
 });</script>{% endblock %}
