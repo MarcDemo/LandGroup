@@ -18,7 +18,20 @@
         {% if form.include_fine_payment %}<div class="col-md-6">
           <div class="category-card border rounded p-3 h-100">
             <div class="form-check form-switch">{{ form.include_fine_payment|add_class:'form-check-input' }}<label class="form-check-label fw-semibold" for="id_include_fine_payment">Fine Payment</label></div>
-            <div id="fine-fields" class="mt-3 d-none"><label class="form-label">Fine amount (UGX)</label>{{ form.fine_payment_amount|add_class:'form-control amount-input' }}{{ form.fine_payment_amount.errors }}<label class="form-label mt-2">Allocate to</label>{{ form.selected_fine|add_class:'form-select' }}{{ form.selected_fine.errors }}</div>
+            <div id="fine-fields" class="mt-3 d-none">
+              <label class="form-label">Fine amount (UGX)</label>{{ form.fine_payment_amount|add_class:'form-control amount-input' }}{{ form.fine_payment_amount.errors }}
+              <div class="form-label mt-3">Allocate to</div>
+              {{ form.selected_fines.errors }}
+              <div class="vstack gap-2">
+                {% for row in form.fine_rows %}<div class="fine-allocation-row border rounded p-2">
+                  <div class="form-check">
+                    <input class="form-check-input fine-selector" type="checkbox" name="selected_fines" value="{{ row.fine.pk }}" id="fine-{{ row.fine.pk }}" {% if row.checked %}checked{% endif %}>
+                    <label class="form-check-label" for="fine-{{ row.fine.pk }}"><strong>{{ row.fine.reason }}</strong><span class="d-block small text-muted">Outstanding: UGX {{ row.fine.outstanding_balance|floatformat:0 }}</span></label>
+                  </div>
+                  <div class="mt-2 fine-allocation-amount"><label class="form-label small mb-1">Amount for this fine (UGX)</label>{{ row.amount_field|add_class:'form-control' }}{{ row.amount_field.errors }}</div>
+                </div>{% endfor %}
+              </div>
+            </div>
           </div>
         </div>{% endif %}
         <div class="col-12"><div class="total-panel rounded p-3 d-flex justify-content-between align-items-center"><span class="fw-semibold">Total Deposit</span><strong class="fs-4" id="deposit-total">UGX 0</strong></div></div>
@@ -36,5 +49,7 @@
 document.addEventListener('DOMContentLoaded',()=>{
  const pairs=[['id_include_land_savings','land-fields','id_land_savings_amount'],['id_include_fine_payment','fine-fields','id_fine_payment_amount']];
  const total=()=>{let n=0;document.querySelectorAll('.amount-input').forEach(i=>n+=Number(i.value)||0);document.getElementById('deposit-total').textContent='UGX '+n.toLocaleString();};
- pairs.forEach(([check,box,input])=>{const c=document.getElementById(check),b=document.getElementById(box),i=document.getElementById(input);if(!c||!b||!i)return;const toggle=()=>{b.classList.toggle('d-none',!c.checked);if(!c.checked)i.value='';total();};c.addEventListener('change',toggle);i.addEventListener('input',total);toggle();}); total();
+ const syncFineRows=()=>document.querySelectorAll('.fine-allocation-row').forEach(row=>{const c=row.querySelector('.fine-selector'),a=row.querySelector('.fine-allocation-amount'),i=a.querySelector('input');a.classList.toggle('d-none',!c.checked);i.disabled=!c.checked;if(!c.checked)i.value='';});
+ document.querySelectorAll('.fine-selector').forEach(c=>c.addEventListener('change',syncFineRows));
+ pairs.forEach(([check,box,input])=>{const c=document.getElementById(check),b=document.getElementById(box),i=document.getElementById(input);if(!c||!b||!i)return;const toggle=()=>{b.classList.toggle('d-none',!c.checked);if(!c.checked){i.value='';if(check==='id_include_fine_payment'){document.querySelectorAll('.fine-selector').forEach(f=>f.checked=false);syncFineRows();}}total();};c.addEventListener('change',toggle);i.addEventListener('input',total);toggle();}); syncFineRows(); total();
 });</script>{% endblock %}

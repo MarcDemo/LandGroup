@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,7 +22,10 @@ from groupcore.models import GroupSettings, MemberProfile
 from .forms import DepositSubmissionForm, DirectDepositForm
 from .models import DepositAuditLog, DepositSubmission, SavingsAccount
 from .notifications import notify_deposit_reviewed, notify_deposit_submitted
-from .services import approve_deposit as approve_deposit_service, get_or_create_account, reject_deposit as reject_deposit_service
+from .services import (
+    approve_deposit as approve_deposit_service, get_or_create_account,
+    reject_deposit as reject_deposit_service, save_fine_allocations,
+)
 from .utils import savings_position, week_label
 
 MONTHS = [(f'{i:02d}', datetime(2000, i, 1).strftime('%B')) for i in range(1, 13)]
@@ -58,16 +62,18 @@ def submit_deposit(request):
     get_or_create_account(request.user)
     form = DepositSubmissionForm(request.POST or None, request.FILES or None, member=request.user)
     if request.method == 'POST' and form.is_valid():
-        deposit = form.save(commit=False)
-        deposit.member = request.user
-        deposit.submitted_by = request.user
-        deposit.starting_week = settings_obj.week_one_start
-        deposit.weeks_covered = 0
-        deposit.land_savings_amount = form.cleaned_data.get('land_savings_amount') or 0
-        deposit.fine_payment_amount = form.cleaned_data.get('fine_payment_amount') or 0
-        deposit.amount = form.cleaned_data['calculated_total']
-        deposit.save()
-        DepositAuditLog.objects.create(deposit=deposit, actor=request.user, action='SUBMITTED')
+        with transaction.atomic():
+            deposit = form.save(commit=False)
+            deposit.member = request.user
+            deposit.submitted_by = request.user
+            deposit.starting_week = settings_obj.week_one_start
+            deposit.weeks_covered = 0
+            deposit.land_savings_amount = form.cleaned_data.get('land_savings_amount') or 0
+            deposit.fine_payment_amount = form.cleaned_data.get('fine_payment_amount') or 0
+            deposit.amount = form.cleaned_data['calculated_total']
+            deposit.save()
+            save_fine_allocations(deposit, form.cleaned_data.get('fine_allocations', []))
+            DepositAuditLog.objects.create(deposit=deposit, actor=request.user, action='SUBMITTED')
         notify_deposit_submitted(deposit)
         messages.success(request, f'Deposit submitted for review. Total: UGX {deposit.amount:,.0f}.')
         return redirect('my_contributions')
@@ -150,22 +156,28 @@ def manage_deposits(request):
         if not settings_obj:
             messages.error(request, 'Configure Group Settings first.')
         else:
-            deposit = form.save(commit=False)
-            deposit.submitted_by = request.user
-            deposit.starting_week, deposit.weeks_covered = settings_obj.week_one_start, 0
-            deposit.land_savings_amount = form.cleaned_data.get('land_savings_amount') or 0
-            deposit.fine_payment_amount = form.cleaned_data.get('fine_payment_amount') or 0
-            deposit.amount = form.cleaned_data['calculated_total']
-            if not deposit.savings_account_id: deposit.savings_account = get_or_create_account(deposit.member)
-            deposit.save()
-            DepositAuditLog.objects.create(deposit=deposit, actor=request.user, action='SUBMITTED_DIRECT')
+            with transaction.atomic():
+                deposit = form.save(commit=False)
+                deposit.submitted_by = request.user
+                deposit.starting_week, deposit.weeks_covered = settings_obj.week_one_start, 0
+                deposit.land_savings_amount = form.cleaned_data.get('land_savings_amount') or 0
+                deposit.fine_payment_amount = form.cleaned_data.get('fine_payment_amount') or 0
+                deposit.amount = form.cleaned_data['calculated_total']
+                if not deposit.savings_account_id: deposit.savings_account = get_or_create_account(deposit.member)
+                deposit.save()
+                save_fine_allocations(deposit, form.cleaned_data.get('fine_allocations', []))
+                DepositAuditLog.objects.create(deposit=deposit, actor=request.user, action='SUBMITTED_DIRECT')
             try:
                 deposit = approve_deposit_service(deposit.pk, request.user)
                 notify_deposit_reviewed(deposit)
                 messages.success(request, 'Direct deposit recorded and approved.')
             except ValidationError as exc: messages.error(request, str(exc))
             return redirect('manage_deposits')
-    deposits = _filtered_deposits(request, DepositSubmission.objects.select_related('member', 'savings_account', 'reviewed_by').order_by('-date_submitted'))
+    deposits = _filtered_deposits(
+        request,
+        DepositSubmission.objects.select_related('member', 'savings_account', 'reviewed_by')
+        .prefetch_related('fine_allocations__fine').order_by('-date_submitted'),
+    )
     return render(request, 'deposits/manage_deposits.html', {
         'deposits': _page(request, deposits), 'form': form, 'active_status': request.GET.get('status', ''),
         'status_counts': {s: DepositSubmission.objects.filter(status=s).count() for s in ('PENDING','APPROVED','REJECTED')},

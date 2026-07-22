@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+from fines.models import Fine
 from groupcore.models import GroupSettings
 from .models import (
     DepositAuditLog, DepositSubmission, FinePaymentAllocation,
@@ -23,6 +24,13 @@ def get_or_create_account(member):
         suffix += 1
         number = f"{base}-{suffix}"
     return SavingsAccount.objects.create(member=member, account_number=number)
+
+
+def save_fine_allocations(deposit, allocations):
+    FinePaymentAllocation.objects.bulk_create([
+        FinePaymentAllocation(deposit=deposit, fine=fine, amount=amount)
+        for fine, amount in allocations
+    ])
 
 
 def allocate_land_savings(deposit, settings_obj):
@@ -52,7 +60,7 @@ def allocate_land_savings(deposit, settings_obj):
 
 @transaction.atomic
 def approve_deposit(deposit_id, reviewer):
-    deposit = DepositSubmission.objects.select_for_update().select_related('selected_fine').get(pk=deposit_id)
+    deposit = DepositSubmission.objects.select_for_update().get(pk=deposit_id)
     if deposit.status != 'PENDING':
         raise ValidationError('This deposit has already been reviewed.')
     settings_obj = GroupSettings.objects.select_for_update().first()
@@ -62,20 +70,38 @@ def approve_deposit(deposit_id, reviewer):
         raise ValidationError('The category amounts do not match the deposit total.')
 
     allocate_land_savings(deposit, settings_obj)
-    if deposit.fine_payment_amount:
-        if not deposit.selected_fine_id or deposit.selected_fine.member_id != deposit.member_id:
-            raise ValidationError('Select a valid fine belonging to this member.')
-        fine = type(deposit.selected_fine).objects.select_for_update().get(pk=deposit.selected_fine_id)
-        outstanding = fine.amount - fine.amount_paid
-        if deposit.fine_payment_amount > outstanding:
-            raise ValidationError(f'Fine payment exceeds the outstanding balance of UGX {outstanding:,.0f}.')
-        FinePaymentAllocation.objects.create(
-            deposit=deposit, fine=fine, amount=deposit.fine_payment_amount,
-        )
-        fine.amount_paid += deposit.fine_payment_amount
-        fine.is_paid = fine.amount_paid >= fine.amount
-        fine.status = 'PAID' if fine.is_paid else 'PARTIAL'
-        fine.save(update_fields=['amount_paid', 'is_paid', 'status'])
+    allocations = list(deposit.fine_allocations.all().order_by('fine_id'))
+    allocated_total = sum((allocation.amount for allocation in allocations), Decimal('0'))
+    if allocated_total != deposit.fine_payment_amount:
+        raise ValidationError('Fine allocations do not match the deposit fine amount.')
+    if deposit.fine_payment_amount and not allocations:
+        raise ValidationError('Select at least one fine for this payment.')
+
+    if allocations:
+        fines = {
+            fine.pk: fine for fine in Fine.objects.select_for_update().filter(
+                pk__in=[allocation.fine_id for allocation in allocations],
+            ).order_by('pk')
+        }
+        if len(fines) != len(allocations):
+            raise ValidationError('One or more selected fines are invalid.')
+        for allocation in allocations:
+            fine = fines[allocation.fine_id]
+            outstanding = fine.amount - fine.amount_paid
+            if (fine.member_id != deposit.member_id or fine.approval_status != 'ACTIVE' or
+                    fine.status == 'PAID' or outstanding <= 0):
+                raise ValidationError('Every selected fine must be active, outstanding, and belong to this member.')
+            if allocation.amount <= 0 or allocation.amount > outstanding:
+                raise ValidationError(
+                    f'Allocation for fine #{fine.pk} exceeds its outstanding balance of UGX {outstanding:,.0f}.'
+                )
+
+        for allocation in allocations:
+            fine = fines[allocation.fine_id]
+            fine.amount_paid += allocation.amount
+            fine.is_paid = fine.amount_paid >= fine.amount
+            fine.status = 'PAID' if fine.is_paid else 'PARTIAL'
+            fine.save(update_fields=['amount_paid', 'is_paid', 'status'])
 
     deposit.status = 'APPROVED'
     deposit.reviewed_by = reviewer

@@ -55,13 +55,18 @@ class DepositAccountingTests(TestCase):
         self.account = SavingsAccount.objects.create(member=self.member, account_number='LIG-00001')
 
     def deposit(self, land=0, fine=0, selected_fine=None, status='PENDING', reference='TX-1', account=None):
-        return DepositSubmission.objects.create(
+        deposit = DepositSubmission.objects.create(
             member=self.member, submitted_by=self.member, savings_account=account or self.account,
             starting_week=self.start, weeks_covered=0, amount=Decimal(str(land + fine)),
             land_savings_amount=Decimal(str(land)), fine_payment_amount=Decimal(str(fine)),
-            selected_fine=selected_fine, transaction_reference=reference,
+            transaction_reference=reference,
             payment_date=timezone.localdate(), payment_time=timezone.localtime().time(), status=status,
         )
+        if selected_fine:
+            FinePaymentAllocation.objects.create(
+                deposit=deposit, fine=selected_fine, amount=Decimal(str(fine)),
+            )
+        return deposit
 
     def test_land_savings_only_and_partial_week(self):
         deposit = self.deposit(land=10000)
@@ -84,7 +89,7 @@ class DepositAccountingTests(TestCase):
         form = DepositSubmissionForm(member=self.member)
         self.assertNotIn('include_fine_payment', form.fields)
         self.assertNotIn('fine_payment_amount', form.fields)
-        self.assertNotIn('selected_fine', form.fields)
+        self.assertNotIn('selected_fines', form.fields)
 
         self.client.force_login(self.member)
         response = self.client.get(reverse('submit_deposit'))
@@ -129,7 +134,7 @@ class DepositAccountingTests(TestCase):
         form = DirectDepositForm(data={'member': self.member.pk})
         self.assertIn('land_savings_amount', form.fields)
         self.assertIn('fine_payment_amount', form.fields)
-        self.assertIn('selected_fine', form.fields)
+        self.assertIn('selected_fines', form.fields)
 
     def test_payment_completes_partial_and_covers_several_weeks(self):
         approve_deposit(self.deposit(land=10000, reference='A').id, self.treasurer)
@@ -156,6 +161,83 @@ class DepositAccountingTests(TestCase):
         self.assertTrue(fine.is_paid)
         self.assertEqual(fine.status, 'PAID')
         self.assertEqual(FinePaymentAllocation.objects.filter(fine=fine).count(), 2)
+
+    def test_one_deposit_can_pay_two_fines(self):
+        first = Fine.objects.create(member=self.member, reason='Late week 1', amount=5000, issued_by=self.treasurer)
+        second = Fine.objects.create(member=self.member, reason='Late week 2', amount=5000, issued_by=self.treasurer)
+        self.client.force_login(self.member)
+
+        response = self.client.post(reverse('submit_deposit'), {
+            'savings_account': self.account.pk,
+            'include_fine_payment': 'on',
+            'fine_payment_amount': '10000',
+            'selected_fines': [str(first.pk), str(second.pk)],
+            f'fine_allocation_{first.pk}': '5000',
+            f'fine_allocation_{second.pk}': '5000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '10:41',
+            'proof': SimpleUploadedFile('proof.jpg', b'payment proof', content_type='image/jpeg'),
+            'remarks': '',
+        })
+
+        self.assertRedirects(response, reverse('my_contributions'))
+        deposit = DepositSubmission.objects.latest('id')
+        self.assertEqual(deposit.fine_allocations.count(), 2)
+        self.assertEqual(sum(a.amount for a in deposit.fine_allocations.all()), Decimal('10000'))
+
+        approve_deposit(deposit.pk, self.treasurer)
+        first.refresh_from_db(); second.refresh_from_db()
+        self.assertEqual((first.status, second.status), ('PAID', 'PAID'))
+
+    def test_fine_allocation_sum_must_match_main_amount(self):
+        first = Fine.objects.create(member=self.member, reason='Late week 1', amount=5000, issued_by=self.treasurer)
+        second = Fine.objects.create(member=self.member, reason='Late week 2', amount=5000, issued_by=self.treasurer)
+        form = DepositSubmissionForm(data={
+            'savings_account': self.account.pk,
+            'include_fine_payment': 'on',
+            'fine_payment_amount': '10000',
+            'selected_fines': [str(first.pk), str(second.pk)],
+            f'fine_allocation_{first.pk}': '5000',
+            f'fine_allocation_{second.pk}': '4000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '10:41',
+        }, files={'proof': SimpleUploadedFile('proof.jpg', b'payment proof', content_type='image/jpeg')}, member=self.member)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('must equal the allocated total', form.errors['fine_payment_amount'][0])
+
+    def test_duplicate_fine_selection_is_rejected(self):
+        fine = Fine.objects.create(member=self.member, reason='Late', amount=5000, issued_by=self.treasurer)
+        form = DepositSubmissionForm(data={
+            'savings_account': self.account.pk,
+            'include_fine_payment': 'on',
+            'fine_payment_amount': '5000',
+            'selected_fines': [str(fine.pk), str(fine.pk)],
+            f'fine_allocation_{fine.pk}': '5000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '10:41',
+        }, files={'proof': SimpleUploadedFile('proof.jpg', b'payment proof', content_type='image/jpeg')}, member=self.member)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('cannot be selected more than once', form.errors['selected_fines'][0])
+
+    def test_stale_fine_balance_rolls_back_all_allocations(self):
+        first = Fine.objects.create(member=self.member, reason='Late week 1', amount=5000, issued_by=self.treasurer)
+        second = Fine.objects.create(member=self.member, reason='Late week 2', amount=5000, issued_by=self.treasurer)
+        deposit = self.deposit(fine=10000)
+        FinePaymentAllocation.objects.create(deposit=deposit, fine=first, amount=5000)
+        FinePaymentAllocation.objects.create(deposit=deposit, fine=second, amount=5000)
+        second.amount_paid = second.amount
+        second.is_paid = True
+        second.status = 'PAID'
+        second.save(update_fields=['amount_paid', 'is_paid', 'status'])
+
+        with self.assertRaises(ValidationError):
+            approve_deposit(deposit.pk, self.treasurer)
+
+        deposit.refresh_from_db(); first.refresh_from_db()
+        self.assertEqual(deposit.status, 'PENDING')
+        self.assertEqual(first.amount_paid, Decimal('0'))
 
     def test_combined_payment_allocates_both_ledgers(self):
         fine = Fine.objects.create(member=self.member, reason='Missed meeting', amount=15000, issued_by=self.treasurer)
@@ -237,7 +319,6 @@ class DepositViewTests(DepositAccountingTests):
             'savings_account': self.account.pk,
             'land_savings_amount': '20000',
             'fine_payment_amount': '',
-            'selected_fine': '',
             'payment_date': timezone.localdate().isoformat(),
             'payment_time': '12:30',
             'remarks': '',
@@ -247,6 +328,30 @@ class DepositViewTests(DepositAccountingTests):
         deposit = DepositSubmission.objects.latest('id')
         self.assertEqual(deposit.status, 'APPROVED')
         self.assertEqual(deposit.land_savings_amount, Decimal('20000'))
+
+    def test_treasurer_direct_deposit_can_pay_multiple_fines(self):
+        first = Fine.objects.create(member=self.member, reason='Late week 1', amount=5000, issued_by=self.treasurer)
+        second = Fine.objects.create(member=self.member, reason='Late week 2', amount=5000, issued_by=self.treasurer)
+        self.client.force_login(self.treasurer)
+
+        response = self.client.post(reverse('manage_deposits'), {
+            'direct_deposit': '1',
+            'member': self.member.pk,
+            'savings_account': self.account.pk,
+            'land_savings_amount': '',
+            'fine_payment_amount': '10000',
+            'selected_fines': [str(first.pk), str(second.pk)],
+            f'fine_allocation_{first.pk}': '5000',
+            f'fine_allocation_{second.pk}': '5000',
+            'payment_date': timezone.localdate().isoformat(),
+            'payment_time': '12:30',
+            'remarks': '',
+        })
+
+        self.assertRedirects(response, reverse('manage_deposits'))
+        deposit = DepositSubmission.objects.latest('id')
+        self.assertEqual(deposit.status, 'APPROVED')
+        self.assertEqual(deposit.fine_allocations.count(), 2)
 
     def test_manage_deposits_renders_thumbnail_and_expanded_proof_modal(self):
         deposit = self.deposit(land=20000)

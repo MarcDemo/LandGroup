@@ -32,7 +32,6 @@ class DepositSubmission(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     land_savings_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))])
     fine_payment_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))])
-    selected_fine = models.ForeignKey('fines.Fine', on_delete=models.PROTECT, null=True, blank=True, related_name='selected_deposits')
     transaction_reference = models.CharField(max_length=80, blank=True, db_index=True)
     proof = models.ImageField(upload_to='proofs/', blank=True, null=True)
     remarks = models.TextField(blank=True, null=True)
@@ -91,10 +90,15 @@ class WeeklySavingsAllocation(models.Model):
 
 
 class FinePaymentAllocation(models.Model):
-    deposit = models.OneToOneField(DepositSubmission, on_delete=models.PROTECT, related_name='fine_allocation')
+    deposit = models.ForeignKey(DepositSubmission, on_delete=models.PROTECT, related_name='fine_allocations')
     fine = models.ForeignKey('fines.Fine', on_delete=models.PROTECT, related_name='payment_allocations')
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['deposit', 'fine'], name='unique_deposit_fine_allocation'),
+        ]
 
 
 class DepositAuditLog(models.Model):
